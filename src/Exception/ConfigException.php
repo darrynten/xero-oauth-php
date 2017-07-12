@@ -1,6 +1,6 @@
 <?php
 /**
- * XeroOauth API Exception
+ * XeroOauth Config Exception
  *
  * @category Exception
  * @package  XeroOauth
@@ -15,11 +15,11 @@ use Exception;
 use DarrynTen\XeroOauth\Exception\ExceptionMessages;
 
 /**
- * Validation exception for XeroOauth
+ * Config exception for XeroOauth
  *
  * @package XeroOauth
  */
-class ValidationException extends Exception
+class ConfigException extends Exception
 {
     const UNDEFINED_CONFIG_EXCEPTION = 11000;
     const MISSING_KEY = 11001;
