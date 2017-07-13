@@ -11,9 +11,8 @@
 
 namespace DarrynTen\XeroOauth\Request;
 
-// This exception file does not exist
-use DarrynTen\Xero\Exception\ApiException;
-use DarrynTen\Xero\Exception\ExceptionMessages;
+use DarrynTen\XeroOauth\Exception\ApiException;
+use DarrynTen\XeroOauth\Exception\ExceptionMessages;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
