@@ -1,6 +1,6 @@
 <?php
 
-namespace DarrynTen\XeroOauth;
+namespace DarrynTen\XeroOauth\Config;
 
 use DarrynTen\XeroOauth\Exception\ConfigException;
 
@@ -250,7 +250,7 @@ abstract class BaseConfig
     {
         $config = [
             'key' => $this->key,
-            'endpoint' => $this->username,
+            'endpoint' => $this->endpoint,
             // etc
         ];
 

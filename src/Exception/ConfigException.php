@@ -12,7 +12,6 @@
 namespace DarrynTen\XeroOauth\Exception;
 
 use Exception;
-use DarrynTen\XeroOauth\Exception\ExceptionMessages;
 
 /**
  * Config exception for XeroOauth
@@ -37,7 +36,7 @@ class ConfigException extends Exception
         $message = sprintf(
             'Config error %s %s',
             $extra,
-            ExceptionMessages::$validationMessages[$code]
+            ExceptionMessages::$modelErrorMessages[$code]
         );
 
         parent::__construct($message, $code);
