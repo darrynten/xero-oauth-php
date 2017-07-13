@@ -9,10 +9,12 @@
 ![Packagist Version](https://img.shields.io/packagist/v/darrynten/xero-oauth-php.svg)
 ![MIT License](https://img.shields.io/github/license/darrynten/xero-oauth-php.svg)
 
-[Xero Oauth]() client for PHP
+[Xero](https://developer.xero.com) OAuth Client for PHP
 
-This is a 100% fully unit tested and (mostly) fully featured unofficial 
-PHP Oauth client for Xero
+# This is work in progress software
+
+This will be a 100% fully unit tested and fully featured unofficial 
+PHP Oauth client for Xero.
 
 This is NOT An SDK, this is _purely_ an oauth client and request handler
 that follows Xeros rules and conventions.
