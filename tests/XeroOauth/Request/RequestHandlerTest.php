@@ -44,7 +44,11 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
      */
     public function testInstanceOf()
     {
-        $this->assertInstanceOf(RequestHandler::class, $this->handler, 'Handler must be an instance of '.RequestHandler::class);
+        $this->assertInstanceOf(
+            RequestHandler::class,
+            $this->handler,
+            sprintf('Handler must be an instance of %s', RequestHandler::class)
+        );
     }
 
     /**
@@ -54,7 +58,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
      */
     public function testWrongMethodHandleRequest()
     {
-        $this->handler->handleRequest('WRONG', '/testUri', []);
+        $this->handler->handleRequest('WRONG', '/testUri', [ ]);
     }
 
     /**
@@ -65,25 +69,36 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     public function testGetHandlerRequestWithException()
     {
         $this->setUpMockClient(
-            new RequestException('Wrong request', new Request('GET', 'Bad one'), new Response(500))
+            new RequestException(
+                'Wrong request',
+                new Request('GET', 'Bad one'),
+                new Response(500)
+            )
         );
-        $this->handler->handleRequest('GET', static::TEST_URI, []);
+        $this->handler->handleRequest('GET', static::TEST_URI, [ ]);
     }
 
     /**
      * Tests if current handler reacts right on different HTTP method requests
      *
      * @dataProvider dataProvider
+     * @param $method
+     * @param $uri
+     * @param $result
      */
     public function testHandleRequest($method, $uri, $result)
     {
         $this->setUpMockClient(
-            new Response(200, ['ContentType: application/json'], $result)
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                $result
+            )
         );
 
         $this->assertEquals(
             \GuzzleHttp\json_decode($result),
-            $this->handler->handleRequest($method, $uri, [])
+            $this->handler->handleRequest($method, $uri, [ ])
         );
     }
 
@@ -92,7 +107,10 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
      */
     public function testRequest()
     {
-        $this->assertTrue(method_exists($this->handler, 'request'), 'Method not found');
+        $this->assertTrue(
+            method_exists($this->handler, 'request'),
+            'Method not found'
+        );
     }
 
     /**
@@ -102,7 +120,9 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
      */
     public function dataProvider()
     {
-        $testResponse = \GuzzleHttp\json_encode(['status' => 'OK']);
+        $testResponse = \GuzzleHttp\json_encode([
+            'status' => 'OK'
+        ]);
 
         return [
             [
@@ -140,7 +160,9 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         ]);
 
         $handler = HandlerStack::create($mockHandler);
-        $mockClient = new Client(['handler' => $handler]);
+        $mockClient = new Client([
+            'handler' => $handler
+        ]);
 
         $reflection = new ReflectionClass($this->handler);
         $reflectedClient = $reflection->getProperty('client');
