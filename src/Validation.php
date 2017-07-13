@@ -15,5 +15,4 @@ use DarrynTen\XeroOauth\Exception\ValidationException;
  */
 trait Validation
 {
-    
 }
