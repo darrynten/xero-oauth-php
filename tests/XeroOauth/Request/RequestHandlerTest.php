@@ -10,7 +10,6 @@ use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use ReflectionClass;
 
-
 class RequestHandlerTest extends \PHPUnit_Framework_TestCase
 {
     const TEST_URI = '/test-uri';
@@ -69,7 +68,8 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    public function testRequest() {
+    public function testRequest()
+    {
         $this->assertTrue(method_exists($this->handler, 'request'), 'Method not found');
     }
 
