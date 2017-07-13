@@ -36,7 +36,7 @@ class ConfigException extends Exception
         $message = sprintf(
             'Config error %s %s',
             $extra,
-            ExceptionMessages::$modelErrorMessages[$code]
+            ExceptionMessages::$configErrorMessages[$code]
         );
 
         parent::__construct($message, $code);

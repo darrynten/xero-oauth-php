@@ -57,16 +57,15 @@ class BaseConfigTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Checks that constructor init methods throws Exception
-     *
-     * @expectedException \DarrynTen\XeroOauth\Exception\ConfigException
-     * @expectedExceptionCode \DarrynTen\XeroOauth\Exception\ConfigException::MISSING_KEY
      */
     public function testConstructorException()
     {
+        $this->expectException(ConfigException::class);
+        $this->expectExceptionCode(ConfigException::MISSING_KEY);
+        $this->expectExceptionMessage(ExceptionMessages::$configErrorMessages[ConfigException::MISSING_KEY]);
+
         $reflectedClass = new ReflectionClass(BaseConfig::class);
         $constructor = $reflectedClass->getConstructor();
         $constructor->invoke($this->configMock, [ ]);
-
-        $this->expectExceptionMessage(ExceptionMessages::$modelErrorMessages[ConfigException::MISSING_KEY]);
     }
 }
