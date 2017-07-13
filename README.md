@@ -1,9 +1,9 @@
 # xero-oauth-php
 
 ![Travis Build Status](https://travis-ci.org/darrynten/xero-oauth-php.svg?branch=dev)
-![StyleCI Status](https://styleci.io/repos/xx/shield?branch=dev)
+![StyleCI Status](https://styleci.io/repos/97003793/shield?branch=dev)
 [![codecov](https://codecov.io/gh/darrynten/xero-oauth-php/branch/dev/graph/badge.svg)](https://codecov.io/gh/darrynten/xero-oauth-php)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/xx)](https://www.codacy.com/app/darrynten/xero-oauth-php?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=darrynten/xero-oauth-php&amp;utm_campaign=Badge_Grade)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/e4ff0345d1424fc680c9e3c71b169e12)](https://www.codacy.com/app/darrynten/xero-oauth-php?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=darrynten/xero-oauth-php&amp;utm_campaign=Badge_Grade)
 [![Code Climate](https://codeclimate.com/github/darrynten/xero-oauth-php/badges/gpa.svg)](https://codeclimate.com/github/darrynten/xero-oauth-php)
 [![Issue Count](https://codeclimate.com/github/darrynten/xero-oauth-php/badges/issue_count.svg)](https://codeclimate.com/github/darrynten/xero-oauth-php)
 ![Packagist Version](https://img.shields.io/packagist/v/darrynten/xero-oauth-php.svg)
