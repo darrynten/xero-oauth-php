@@ -30,7 +30,7 @@
       "bin/phpcs -p --extensions=php --standard=PSR2 --error-severity=1 --warning-severity=0 --ignore=./tests/coverage/* ./src ./tests;"
     ],
     "fix-style": [
-      "bin/phpcbf --standard=PSR2 --extensions=php ./src ./tests;"
+      "bin/phpcbf --standard=PSR2 --extensions=php --ignore=./tests/coverage/* ./src ./tests;"
     ]
   }
 }
