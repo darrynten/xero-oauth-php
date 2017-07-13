@@ -8,7 +8,7 @@ namespace DarrynTen\XeroOauth\Exception;
 class ExceptionMessages
 {
     // Config codes 110xx
-    public static $modelErrorMessages = [
+    public static $configErrorMessages = [
         // Methods
         11000 => 'Undefined config exception',
         11001 => 'Missing key',
