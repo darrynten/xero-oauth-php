@@ -22,7 +22,9 @@ class ConfigException extends Exception
 {
     const UNDEFINED_CONFIG_EXCEPTION = 11000;
     const MISSING_KEY = 11001;
-    // number constants up from this number - 11002 is next
+    const MISSING_APPLICATION_TYPE = 11002;
+    const UNKNOWN_APPLICATION_TYPE = 11003;
+    // number constants up from this number - 11004 is next
 
     /**
      * Custom validation exception handler
