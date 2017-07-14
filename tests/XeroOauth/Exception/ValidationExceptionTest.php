@@ -7,7 +7,7 @@ use DarrynTen\XeroOauth\Exception\ValidationException;
 class ValidationExceptionTest extends \PHPUnit_Framework_TestCase
 {
     /**
-     * Extra string in Validation message
+     * Extra string in Validation Exception message
      */
     const EXTRA = 'extra';
 
@@ -20,7 +20,9 @@ class ValidationExceptionTest extends \PHPUnit_Framework_TestCase
         $this->expectException(ValidationException::class);
         $this->expectExceptionCode(ValidationException::UNDEFINED_VALIDATION_EXCEPTION);
         $this->expectExceptionMessageRegExp(
-            sprintf("/%s$/", ExceptionMessages::$validationMessages[ ValidationException::UNDEFINED_VALIDATION_EXCEPTION ])
+            sprintf("/%s$/", ExceptionMessages::$validationMessages[
+                ValidationException::UNDEFINED_VALIDATION_EXCEPTION
+            ])
         );
 
         throw new ValidationException(ValidationException::UNDEFINED_VALIDATION_EXCEPTION);
@@ -38,7 +40,9 @@ class ValidationExceptionTest extends \PHPUnit_Framework_TestCase
             sprintf(
                 "/%s %s$/",
                 static::EXTRA,
-                ExceptionMessages::$validationMessages[ ValidationException::UNDEFINED_VALIDATION_EXCEPTION ]
+                ExceptionMessages::$validationMessages[
+                    ValidationException::UNDEFINED_VALIDATION_EXCEPTION
+                ]
             )
         );
 

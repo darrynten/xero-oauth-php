@@ -59,7 +59,7 @@ class ApiExceptionTest extends \PHPUnit_Framework_TestCase
                 json_encode([
                     'status' => static::TEST_STATUS,
                     'title' => static::TEST_MESSAGE,
-                    'detail' => static::TEST_DETAIL
+                    'detail' => static::TEST_DETAIL,
                 ]),
                 sprintf(
                     "%s: %s - %s",
@@ -75,7 +75,7 @@ class ApiExceptionTest extends \PHPUnit_Framework_TestCase
                     'title' => static::TEST_MESSAGE,
                     'detail' => static::TEST_DETAIL,
                     'errors' => [
-                        static::TEST_ADDITIONAL
+                        static::TEST_ADDITIONAL,
                     ]
                 ]),
                 sprintf(
@@ -84,7 +84,7 @@ class ApiExceptionTest extends \PHPUnit_Framework_TestCase
                     static::TEST_MESSAGE,
                     static::TEST_DETAIL,
                     json_encode([
-                        static::TEST_ADDITIONAL
+                        static::TEST_ADDITIONAL,
                     ])
                 )
             ],

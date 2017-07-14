@@ -7,7 +7,7 @@ use DarrynTen\XeroOauth\Exception\ExceptionMessages;
 class ConfigExceptionTest extends \PHPUnit_Framework_TestCase
 {
     /**
-     * Extra string in Config message
+     * Extra string in Config Exception message
      */
     const EXTRA = 'extra';
 
@@ -65,7 +65,7 @@ class ConfigExceptionTest extends \PHPUnit_Framework_TestCase
             [
                 ConfigException::UNDEFINED_CONFIG_EXCEPTION,
                 ExceptionMessages::$configErrorMessages[ ConfigException::UNDEFINED_CONFIG_EXCEPTION ]
-            ]
+            ],
         ];
     }
 }
