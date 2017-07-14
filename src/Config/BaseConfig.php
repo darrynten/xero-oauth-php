@@ -7,6 +7,8 @@ use DarrynTen\XeroOauth\Exception\ConfigException;
 /**
  * XeroOauth Config
  *
+ * TODO Make public attributes protected and put them under getters/setters/__magic
+ *
  * @category Configuration
  * @package  XeroOauthPHP
  * @author   Darryn Ten <darrynten@github.com>

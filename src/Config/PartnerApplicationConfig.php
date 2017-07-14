@@ -11,8 +11,6 @@
 
 namespace DarrynTen\XeroOauth\Config;
 
-use DarrynTen\XeroOauth\BaseConfig;
-
 /**
  * Parner Application Configuration
  *
