@@ -4,7 +4,7 @@
  *
  * @category Library
  * @package  XeroOauth
- * @author   Darryn Ten <darrynten@github.com>
+ * @author   Mikhail Levanov <leor.thesweetvoice@gmail.com>
  * @license  MIT <https://github.com/darrynten/xero-oauth-php/blob/master/LICENSE>
  * @link     https://github.com/darrynten/xero-oauth-php
  */
@@ -19,10 +19,12 @@ class ConfigFactory
      * Value for Public Application type
      */
     const APPLICATION_TYPE_PUBLIC = 'public';
+
     /**
      * Value for Private Application type
      */
     const APPLICATION_TYPE_PRIVATE = 'private';
+
     /**
      * Value for Partner Application type
      */
