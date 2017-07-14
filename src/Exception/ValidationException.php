@@ -12,7 +12,6 @@
 namespace DarrynTen\XeroOauth\Exception;
 
 use Exception;
-use DarrynTen\XeroOauth\Exception\ExceptionMessages;
 
 /**
  * Validation exception for XeroOauth
