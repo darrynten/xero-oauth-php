@@ -34,7 +34,7 @@ class ConfigFactory
      * Mar of dependencies between type values and classes
      * @var array
      */
-    static private $map = [
+    private static $map = [
         self::APPLICATION_TYPE_PUBLIC => PublicApplicationConfig::class,
         self::APPLICATION_TYPE_PRIVATE => PrivateApplicationConfig::class,
         self::APPLICATION_TYPE_PARTNER => PartnerApplicationConfig::class
