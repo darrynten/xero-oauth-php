@@ -43,7 +43,7 @@ class ApiExceptionTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Provides data for tests
+     * Provides data for tests: an array of arrays with structure [ code, message, expected message ]
      * @return array
      */
     public function dataProvider()
