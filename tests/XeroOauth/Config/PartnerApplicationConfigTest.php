@@ -68,6 +68,6 @@ class PartnerApplicationConfigTest extends \PHPUnit_Framework_TestCase
         $this->expectExceptionCode(ConfigException::MISSING_KEY);
         $this->expectExceptionMessage(ExceptionMessages::$configErrorMessages[ConfigException::MISSING_KEY]);
 
-        $configObject = new PartnerApplicationConfig([ ]);
+        (new PartnerApplicationConfig([ ]));
     }
 }

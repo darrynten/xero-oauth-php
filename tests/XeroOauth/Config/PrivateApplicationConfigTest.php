@@ -68,6 +68,6 @@ class PrivateApplicationConfigTest extends \PHPUnit_Framework_TestCase
         $this->expectExceptionCode(ConfigException::MISSING_KEY);
         $this->expectExceptionMessage(ExceptionMessages::$configErrorMessages[ConfigException::MISSING_KEY]);
 
-        $configObject = new PrivateApplicationConfig([ ]);
+        (new PrivateApplicationConfig([ ]));
     }
 }
