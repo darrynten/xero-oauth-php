@@ -12,6 +12,8 @@ class ExceptionMessages
         // Methods
         11000 => 'Undefined config exception',
         11001 => 'Missing key',
+        11002 => 'Missing application type',
+        11003 => 'Unknown application type'
     ];
 
     // Validation codes 111xx
