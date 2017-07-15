@@ -11,7 +11,8 @@
 
 namespace DarrynTen\XeroOauth;
 
-use DarrynTen\XeroOauth\Config;
+use DarrynTen\XeroOauth\Config\BaseConfig;
+use DarrynTen\XeroOauth\Config\ConfigFactory;
 use DarrynTen\XeroOauth\Request\RequestHandler;
 
 /**
@@ -24,7 +25,7 @@ class XeroOauth
     /**
      * Configuration
      *
-     * @var Config $config
+     * @var BaseConfig $config
      */
     public $config;
 
@@ -42,7 +43,8 @@ class XeroOauth
      */
     public function __construct(array $config)
     {
-        $this->config = new Config($config);
+        $factory = new ConfigFactory();
+        $this->config = $factory->getConfig($config);
         $this->request = new RequestHandler($this->config->getRequestHandlerConfig());
     }
 
