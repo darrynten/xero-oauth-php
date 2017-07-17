@@ -152,16 +152,14 @@ class RequestHandler
     /**
      * Makes a request using Guzzle
      *
-     * @param string $verb The HTTP request verb (GET/POST/etc)
-     * @param string $service The api service
-     * @param string $method The services method
+     * @param string $method The HTTP request verb (GET/POST/etc)
+     * @param string $uri Service method uri
      * @param array $options Request options
      * @param array $parameters Request parameters
-     *
-     * @see RequestHandler::request()
-     *
      * @return array
      * @throws ApiException
+     * @see RequestHandler::request()
+     *
      */
     public function handleRequest(string $method, string $uri, array $options, array $parameters = [])
     {
@@ -228,13 +226,13 @@ class RequestHandler
             'oauth_timestamp=' . time(),
             'oauth_nonce=' . uniqid('xero', true),
             'oauth_callback=' . $this->callbackUrl,
-            'oauth_version=' . static::OAUTH_VERSION
+            'oauth_version=' . static::OAUTH_VERSION,
         ];
 
         if (!$this->token) {
             $this->getRequestToken($parts);
         }
-        
+
         $parts[ 'oauth_token' ] = $this->token;
 
         if ($this->tokenVerifier) {
@@ -257,7 +255,7 @@ class RequestHandler
     {
         $options = [
             'headers' => [
-                'Authorization' => 'OAuth ' . join(',', $parts)
+                'Authorization' => 'OAuth ' . join(',', $parts),
             ]
         ];
 
@@ -286,7 +284,7 @@ class RequestHandler
             );
         }
 
-        if ($mode == static::REQUEST_TOKEN) {
+        if ($mode === static::REQUEST_TOKEN) {
             // todo: if we work with RequestToken, we need to provide application with AuthorisationURL
             // todo: Also we should provide current Token Data to the application to store it between the redirects
         }
@@ -297,7 +295,6 @@ class RequestHandler
      *
      * @param $httpMethod
      * @param $service
-     * @param $method
      * @param array $parameters
      * @return array
      */
@@ -305,7 +302,7 @@ class RequestHandler
     {
         $options = [
             'headers' => [
-                'Authorization' => $this->getAuthToken()
+                'Authorization' => $this->getAuthToken(),
             ]
         ];
 

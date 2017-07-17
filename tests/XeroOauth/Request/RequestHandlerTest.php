@@ -30,7 +30,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         'token_expires_in' => '', // todo: we need it
         'verifier' => '', // todo: need it to getAccessToken
         'callback_url' => 'http://localhost:8082',
-        'sign_with' => 'HMAC-SHA1'
+        'sign_with' => 'HMAC-SHA1',
     ];
 
     /**
@@ -80,7 +80,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
                 'Wrong request',
                 new Request('GET', 'Bad one'),
                 new Response(500)
-            )
+            ),
         ]);
         $this->handler->handleRequest('GET', static::TEST_URI, [ ]);
     }
@@ -100,7 +100,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
                 200,
                 [ 'ContentType: application/json' ],
                 $result
-            )
+            ),
         ]);
 
         $this->assertEquals(
@@ -121,7 +121,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         );
 
         $expectedResult = \GuzzleHttp\json_encode([
-            'status' => 'ready'
+            'status' => 'ready',
         ]);
 
         $this->setUpMockClient([
@@ -138,7 +138,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
                 200,
                 [ 'ContentType: application/json' ],
                 $expectedResult
-            )
+            ),
         ]);
 
         $result = $this->handler->request(
@@ -157,29 +157,29 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     public function dataProvider()
     {
         $testResponse = \GuzzleHttp\json_encode([
-            'status' => 'OK'
+            'status' => 'OK',
         ]);
 
         return [
             [
                 'GET',
                 static::TEST_URI,
-                $testResponse
+                $testResponse,
             ],
             [
                 'POST',
                 static::TEST_URI,
-                $testResponse
+                $testResponse,
             ],
             [
                 'PUT',
                 static::TEST_URI,
-                $testResponse
+                $testResponse,
             ],
             [
                 'DELETE',
                 static::TEST_URI,
-                $testResponse
+                $testResponse,
             ],
         ];
     }
@@ -195,7 +195,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
 
         $handler = HandlerStack::create($mockHandler);
         $mockClient = new Client([
-            'handler' => $handler
+            'handler' => $handler,
         ]);
 
         $reflection = new ReflectionClass($this->handler);

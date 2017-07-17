@@ -30,7 +30,7 @@ class XeroOauthTest extends \PHPUnit_Framework_TestCase
     {
         $this->client = new XeroOauth([
             'applicationType' => $applicationType,
-            'key' => self::TEST_KEY
+            'key' => self::TEST_KEY,
         ]);
 
         $this->assertInstanceOf(XeroOauth::class, $this->client);
@@ -58,7 +58,7 @@ class XeroOauthTest extends \PHPUnit_Framework_TestCase
             ],
             [
                 ConfigFactory::APPLICATION_TYPE_PARTNER,
-                PartnerApplicationConfig::class
+                PartnerApplicationConfig::class,
             ],
         ];
     }
