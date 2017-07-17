@@ -231,18 +231,18 @@ class RequestHandler
             'oauth_version=' . static::OAUTH_VERSION
         ];
 
-        if($this->token) {
+        if ($this->token) {
             $parts[ 'oauth_token' ] = $this->token;
         } else {
             // not token - get it
             $this->getRequestToken($parts);
         }
 
-        if($this->tokenVerifier) {
+        if ($this->tokenVerifier) {
             $parts[ 'oauth_verifier' ] = $this->tokenVerifier;
         }
 
-        if($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime()) {
+        if ($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime()) {
             $this->getRequestToken($parts);
         }
 
@@ -281,13 +281,13 @@ class RequestHandler
 
         $this->token = $tokenData->oauth_token;
         $this->tokenSecret = $tokenData->oauth_token_secret;
-        if($this->tokenExpireTime && $tokenData->oauth_expires_in) {
+        if ($this->tokenExpireTime && $tokenData->oauth_expires_in) {
             $this->tokenExpireTime = $this->tokenExpireTime->modify(
                 sprinf('%s seconds', $tokenData->oauth_expires_in)
             );
         }
 
-        if($mode == static::REQUEST_TOKEN) {
+        if ($mode == static::REQUEST_TOKEN) {
             // todo: if we work with RequestToken, we need to provide application with AuthorisationURL
             // todo: Also we should provide current Token Data to the application to store it between the redirects
         }
