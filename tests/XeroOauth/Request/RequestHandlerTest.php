@@ -23,7 +23,14 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
      */
     private $config = [
         'key' => 'testKey',
-        'endpoint' => 'http://localhost:8082'
+        'endpoint' => 'http://localhost:8082',
+        'secret' => '', // we need it to sign requests
+        'token' => '', // todo: we need it
+        'token_secret' => '', // todo: we need it to sign requests
+        'token_expires_in' => '', // todo: we need it
+        'verifier' => '', // todo: need it to getAccessToken
+        'callback_url' => 'http://localhost:8082',
+        'sign_with' => 'HMAC-SHA1'
     ];
 
     /**
@@ -68,13 +75,13 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetHandlerRequestWithException()
     {
-        $this->setUpMockClient(
+        $this->setUpMockClient([
             new RequestException(
                 'Wrong request',
                 new Request('GET', 'Bad one'),
                 new Response(500)
             )
-        );
+        ]);
         $this->handler->handleRequest('GET', static::TEST_URI, [ ]);
     }
 
@@ -88,13 +95,13 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
      */
     public function testHandleRequest($method, $uri, $result)
     {
-        $this->setUpMockClient(
+        $this->setUpMockClient([
             new Response(
                 200,
                 [ 'ContentType: application/json' ],
                 $result
             )
-        );
+        ]);
 
         $this->assertEquals(
             \GuzzleHttp\json_decode($result),
@@ -103,7 +110,8 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Checks if current handler has a method
+     * Checks request method of current handler
+     * Checks only case with getting Access Token
      */
     public function testRequest()
     {
@@ -111,6 +119,34 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             method_exists($this->handler, 'request'),
             'Method not found'
         );
+
+        $expectedResult = \GuzzleHttp\json_encode([
+            'status' => 'ready'
+        ]);
+
+        $this->setUpMockClient([
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                \GuzzleHttp\json_encode([
+                    'oauth_token' => uniqid('token'),
+                    'oauth_token_secret' => uniqid('secret'),
+                    'oauth_expires_in' => new \DateTime('+2 hours')
+                ])
+            ),
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                $expectedResult
+            )
+        ]);
+
+        $result = $this->handler->request(
+            'GET',
+            self::TEST_URI,
+            [ ]
+        );
+        $this->assertEquals(\GuzzleHttp\json_decode($expectedResult), $result);
     }
 
     /**
@@ -151,13 +187,11 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     /**
      * Utility method for GuzzleHttp\MockHandler setup
      *
-     * @param $result
+     * @param $results
      */
-    private function setUpMockClient($result)
+    private function setUpMockClient($results)
     {
-        $mockHandler = new MockHandler([
-            $result
-        ]);
+        $mockHandler = new MockHandler($results);
 
         $handler = HandlerStack::create($mockHandler);
         $mockClient = new Client([

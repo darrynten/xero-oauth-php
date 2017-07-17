@@ -31,6 +31,21 @@ use GuzzleHttp\Exception\ServerException;
 class RequestHandler
 {
     /**
+     * Current OAuth version
+     */
+    const OAUTH_VERSION = '1.0';
+
+    /**
+     * If we need a temporary Token
+     */
+    const REQUEST_TOKEN = 'RequestToken';
+
+    /**
+     * If we need a real token
+     */
+    const ACCESS_TOKEN = 'AccessToken';
+
+    /**
      * GuzzleHttp Client
      *
      * @var Client $client
@@ -45,11 +60,61 @@ class RequestHandler
     private $key;
 
     /**
+     * The consumer secret for the key
+     *
+     * @var string $secret
+     */
+    private $secret;
+
+    /**
      * The endpoint that gets passed in from config
      *
      * @var string $endpoint
      */
     private $endpoint;
+
+    /**
+     * Authorization token
+     *
+     * @var string $token
+     */
+    private $token;
+
+    /**
+     * Authorization token secret
+     *
+     * @var string $tokenSecret
+     */
+    private $tokenSecret;
+
+    /**
+     * Authorization token expires time
+     * If NULL then Token least forever
+     *
+     * @var \DateTime|null $tokenExpireTime
+     */
+    private $tokenExpireTime;
+
+    /**
+     * Verifier for Auth token
+     *
+     * @var string $tokenVerifier
+     */
+    private $tokenVerifier;
+
+    /**
+     * The callback for an Authorization process
+     *
+     * @var string $callbackUrl
+     */
+    private $callbackUrl;
+
+    /**
+     * Request signature method
+     *
+     * @var string $signatureMethod
+     */
+    private $signatureMethod;
 
     /**
      * Valid HTTP Verbs for this API
@@ -72,6 +137,14 @@ class RequestHandler
     {
         $this->key = $config['key'];
         $this->endpoint = $config['endpoint'];
+        $this->secret = $config['secret'];
+        $this->callbackUrl = $config['callback_url'];
+
+        $this->token = $config['token'];
+        $this->tokenSecret = $config['token_secret'];
+        $this->tokenExpireTime = $config['token_expires_in'];
+        $this->tokenVerifier = $config['verifier'];
+        $this->signatureMethod = $config['sign_with'];
 
         $this->client = new Client();
     }
@@ -128,6 +201,7 @@ class RequestHandler
      */
     private function handleException($exception)
     {
+        /** @var \Exception $exception */
         $code = $exception->getCode();
         $message = $exception->getMessage();
 
@@ -148,26 +222,103 @@ class RequestHandler
      */
     private function getAuthToken()
     {
-        // etc
+        $parts = [
+            'oauth_consumer_key=' . $this->key,
+            'oauth_signature_method=' . $this->signatureMethod,
+            'oauth_timestamp=' . time(),
+            'oauth_nonce=' . uniqid('xero', true),
+            'oauth_callback=' . $this->callbackUrl,
+            'oauth_version=' . static::OAUTH_VERSION
+        ];
+
+        if($this->token) {
+            $parts[ 'oauth_token' ] = $this->token;
+        } else {
+            // not token - get it
+            $this->getRequestToken($parts);
+        }
+
+        if($this->tokenVerifier) {
+            $parts[ 'oauth_verifier' ] = $this->tokenVerifier;
+        }
+
+        if($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime()) {
+            $this->getRequestToken($parts);
+        }
+
+        return 'OAuth ' . join(',', $parts);
     }
 
     /**
      * Make request to Xero API for the new token
      *
-     * @throws ApiException
+     * @param array $parts
      */
-    private function getRequestToken()
+    private function getRequestToken(array $parts = [])
     {
-        // etc
+        $options = [
+            'headers' => [
+                'Authorization' => 'OAuth ' . join(',', $parts)
+            ]
+        ];
+
+        // todo: We must sign each request
+
+        $parameters = [ ];
+        $mode = $this->token ? static::ACCESS_TOKEN : static::REQUEST_TOKEN;
+
+        $tokenData = $this->handleRequest(
+            'GET',
+            sprintf(
+                '%s/%s/%s',
+                $this->endpoint,
+                'oauth',
+                $mode
+            ),
+            $options,
+            $parameters
+        );
+
+        $this->token = $tokenData->oauth_token;
+        $this->tokenSecret = $tokenData->oauth_token_secret;
+        if($this->tokenExpireTime && $tokenData->oauth_expires_in) {
+            $this->tokenExpireTime = $this->tokenExpireTime->modify(
+                sprinf('%s seconds', $tokenData->oauth_expires_in)
+            );
+        }
+
+        if($mode == static::REQUEST_TOKEN) {
+            // todo: if we work with RequestToken, we need to provide application with AuthorisationURL
+            // todo: Also we should provide current Token Data to the application to store it between the redirects
+        }
     }
 
     /**
      * Makes a request to Xero with a token
      *
-     * @throws ApiException
+     * @param $httpMethod
+     * @param $service
+     * @param $method
+     * @param array $parameters
+     * @return array
      */
-    public function request()
+    public function request($httpMethod, $service, $parameters = [ ])
     {
-        // etc
+        $options = [
+            'headers' => [
+                'Authorization' => $this->getAuthToken()
+            ]
+        ];
+
+        return $this->handleRequest(
+            $httpMethod,
+            sprintf(
+                '%s/%s',
+                $this->endpoint,
+                $service
+            ),
+            $options,
+            $parameters
+        );
     }
 }
