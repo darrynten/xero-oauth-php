@@ -231,12 +231,11 @@ class RequestHandler
             'oauth_version=' . static::OAUTH_VERSION
         ];
 
-        if ($this->token) {
-            $parts[ 'oauth_token' ] = $this->token;
-        } else {
-            // not token - get it
+        if (!$this->token) {
             $this->getRequestToken($parts);
         }
+        
+        $parts[ 'oauth_token' ] = $this->token;
 
         if ($this->tokenVerifier) {
             $parts[ 'oauth_verifier' ] = $this->tokenVerifier;
