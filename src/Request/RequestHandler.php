@@ -125,7 +125,7 @@ class RequestHandler
         'GET',
         'POST',
         'PUT',
-        'DELETE'
+        'DELETE',
     ];
 
     /**

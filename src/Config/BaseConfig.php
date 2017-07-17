@@ -266,7 +266,7 @@ abstract class BaseConfig
             'token_expires_in' => '', // todo: we need it
             'verifier' => '', // todo: need it to getAccessToken
             'callback_url' => $this->callbackUrl,
-            'sign_with' => $this->signWith
+            'sign_with' => $this->signWith,
         ];
 
         return $config;
