@@ -186,6 +186,13 @@ abstract class BaseConfig
     public $callbackUrl;
 
     /**
+     * Signature method for requests
+     *
+     * @var string $signWith
+     */
+    public $signWith;
+
+    /**
      * Construct the config object
      *
      * @param array $config An array of configuration options
@@ -253,7 +260,13 @@ abstract class BaseConfig
         $config = [
             'key' => $this->key,
             'endpoint' => $this->endpoint,
-            // etc
+            'secret' => $this->secret, // we need it to sign requests
+            'token' => '', // todo: we need it
+            'token_secret' => '', // todo: we need it to sign requests
+            'token_expires_in' => '', // todo: we need it
+            'verifier' => '', // todo: need it to getAccessToken
+            'callback_url' => $this->callbackUrl,
+            'sign_with' => $this->signWith,
         ];
 
         return $config;
