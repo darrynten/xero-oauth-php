@@ -13,7 +13,10 @@ class ExceptionMessages
         11000 => 'Undefined config exception',
         11001 => 'Missing key',
         11002 => 'Missing application type',
-        11003 => 'Unknown application type'
+        11003 => 'Unknown application type',
+        11004 => 'Unknown signature method',
+        11005 => 'Private key not found',
+        11006 => 'Private key invalid',
     ];
 
     // Validation codes 111xx

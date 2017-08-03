@@ -2,6 +2,7 @@
 namespace DarrynTen\XeroOauth\Tests\XeroOauth\Request;
 
 use DarrynTen\XeroOauth\Request\RequestHandler;
+use DarrynTen\XeroOauth\Exception\ConfigException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Handler\MockHandler;
@@ -83,6 +84,64 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             ),
         ]);
         $this->handler->handleRequest('GET', static::TEST_URI, [ ]);
+    }
+
+    /**
+     * Checks if current handler throws right exception in case of wrong signature method
+     *
+     * @expectedException \DarrynTen\XeroOauth\Exception\ConfigException
+     * @expectedExceptionCode 11004
+     * @expectedExceptionMessage Config error MD5 Unknown signature method
+     */
+    public function testWrongSignature()
+    {
+        $this->config['sign_with'] = 'MD5';
+        $this->handler = new RequestHandler($this->config);
+        $this->handler->generateOAuthSignature('GET', '/');
+    }
+
+    /**
+     * Checks if current handler throws right exception in case of wrong private key contents
+     *
+     * @expectedException \DarrynTen\XeroOauth\Exception\ConfigException
+     * @expectedExceptionCode 11006
+     * @expectedExceptionMessage Config error /home/ch/xero-oauth-php/tests/XeroOauth/Request/../../mocks/Oauth/Private/privatekey_invalid.pem Private key invalid
+     */
+    public function testInvalidPrivateKey()
+    {
+        $this->config['sign_with'] = 'RSA-SHA1';
+        $this->config['private_key'] = __DIR__ . '/../../mocks/Oauth/Private/privatekey_invalid.pem';
+        $this->handler = new RequestHandler($this->config);
+        $this->handler->generateOAuthSignature('GET', '/');
+    }
+
+    /**
+     * Checks if current handler throws right exception in case of wrong private key path
+     *
+     * @expectedException \DarrynTen\XeroOauth\Exception\ConfigException
+     * @expectedExceptionCode 11005
+     * @expectedExceptionMessage Config error /tmp/some-file-does-not-exist Private key not found
+     */
+    public function testWrongPrivateKeyPath()
+    {
+        $this->config['sign_with'] = 'RSA-SHA1';
+        $this->config['private_key'] = '/tmp/some-file-does-not-exist';
+        $this->handler = new RequestHandler($this->config);
+        $this->handler->generateOAuthSignature('GET', '/');
+    }
+
+    /**
+     * Checks if we can open private key
+     */
+    public function testCorrectPrivateKey()
+    {
+        $this->config['sign_with'] = 'RSA-SHA1';
+        $this->config['private_key'] = __DIR__ . '/../../mocks/Oauth/Private/privatekey.pem';
+        $this->handler = new RequestHandler($this->config);
+        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+            'key' => 'value'
+        ]);
+        $this->assertEquals('BPKGYjZR33z/nDeKU7SElz1rAmXVu2kmxDaffo9ZGb+rlPtQlL3LGmqbIUBchLSgtw12ZcwXxxCpD1swlEsuvY0nJrfO2nd9YsPZojy0w6oMvfhfKBB1Xru5bT7Y3iN94ypGirDa4edZIIVeFOS+SfDe1RNOGiNA/w+MiQ+nhZg=', $sign);
     }
 
     /**

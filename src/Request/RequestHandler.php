@@ -13,6 +13,7 @@ namespace DarrynTen\XeroOauth\Request;
 
 use DarrynTen\XeroOauth\Exception\ApiException;
 use DarrynTen\XeroOauth\Exception\ExceptionMessages;
+use DarrynTen\XeroOauth\Exception\ConfigException;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
@@ -117,6 +118,13 @@ class RequestHandler
     private $signatureMethod;
 
     /**
+     * Private key path
+     *
+     * @var string $privateKey
+     */
+    private $privateKey;
+
+    /**
      * Valid HTTP Verbs for this API
      *
      * @var array $verbs
@@ -145,6 +153,8 @@ class RequestHandler
         $this->tokenExpireTime = $config['token_expires_in'];
         $this->tokenVerifier = $config['verifier'];
         $this->signatureMethod = $config['sign_with'];
+
+        $this->privateKey = isset($config['private_key']) ? $config['private_key'] : null;
 
         $this->client = new Client();
     }
@@ -316,5 +326,94 @@ class RequestHandler
             $options,
             $parameters
         );
+    }
+
+    /**
+     * Generates oauth signature
+     */
+    public function generateOauthSignature(string $method, string $path, array $parameters = [])
+    {
+        switch ($this->signatureMethod) {
+            case 'RSA-SHA1':
+                return $this->generateRSASHA1Signature($method, $path, $parameters);
+                break;
+            default:
+                throw new ConfigException(ConfigException::UNKNOWN_SIGNATURE_METHOD, $this->signatureMethod);
+        }
+    }
+
+    protected function generateRSASHA1Signature(string $method, string $path, array $parameters)
+    {
+        if (!file_exists($this->privateKey)) {
+            throw new ConfigException(ConfigException::PRIVATE_KEY_NOT_FOUND, $this->privateKey);
+        }
+
+        $fp = fopen($this->privateKey, 'r');
+        $contents = fread($fp, 8192);
+        fclose($fp);
+
+        $privateKey = openssl_pkey_get_private($contents);
+        if ($privateKey === false) {
+            throw new ConfigException(ConfigException::PRIVATE_KEY_INVALID, $this->privateKey);
+        }
+
+        $sbs = sprintf(
+            '%s&%s&%s',
+            $method,
+            $path,
+            $this->sortParameters($parameters)
+        );
+
+        openssl_sign($sbs, $signature, $privateKey);
+
+        openssl_free_key($privateKey);
+
+        return base64_encode($signature);
+    }
+
+    /**
+     * Sorts query parameters
+     * @param array $parameters
+     */
+    protected function sortParameters(array $parameters)
+    {
+        $elements = [];
+        ksort($parameters);
+        foreach ($parameters as $name => $value) {
+            if (is_array($value)) {
+                sort($value);
+                foreach ($value as $element) {
+                    array_push(
+                        $elements,
+                        sprintf('%s=%s', $this->oauthEscape($name), $this->oauthEscape($element))
+                    );
+                }
+                continue;
+            }
+            array_push(
+                $elements,
+                sprintf('%s=%s', $this->oauthEscape($name), $this->oauthEscape($value))
+            );
+        }
+        return join('&', $elements);
+    }
+
+    /**
+     * Escapes all special symbols for query
+     * @param string $string
+     */
+    protected function oauthEscape(string $string)
+    {
+        if (empty($string)) {
+            return '';
+        }
+        $string = rawurlencode($string);
+        $string = str_replace('+', '%20', $string);
+        $string = str_replace('!', '%21', $string);
+        $string = str_replace('*', '%2A', $string);
+        $string = str_replace('\'', '%27', $string);
+        $string = str_replace('(', '%28', $string);
+        $string = str_replace(')', '%29', $string);
+        return $string;
     }
 }
