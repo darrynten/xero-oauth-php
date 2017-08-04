@@ -131,7 +131,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Checks if we can open private key
+     * Checks if we can open private key and generate signature
      */
     public function testCorrectPrivateKey()
     {
@@ -141,7 +141,11 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $sign = $this->handler->generateOAuthSignature('GET', '/', [
             'key' => 'value'
         ]);
-        $this->assertEquals('rH4jh6gfJc0GvOkhwXuFFjq8It5b/hMISuVfmqboI0qyxoFWCpd8j/Cgo5WuhYq9BVUPjSopbsDsrfnGX+rdC9AZv4Z+BVTjZEMK6sfPyhCyOqaXvZZF0+NofyVLkORQACwxRFV5Nn0VIsBFcAgjtemdl3Y0DFzcCZbyBKgLbMw=', $sign);
+        $this->assertEquals('SNxd1VSuQpIcr642qaRFQcXPGJySRZ9PKacY+MUTnhZH50cX/je9nbNIdvlsb2b1uzTrfIRl5wWuxo6cBZd3nT5NYQnrEjgk1lhHP9yN+GQ8pbA8tYJdfVQqhvJK8mIApt7x7L4GxoPcV5tlRldvhYegqshu1cXP4ZBUznyswVk=', $sign);
+        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+            'key' => 'value2'
+        ]);
+        $this->assertEquals('MEu45ZNC6Ggf1IILCWw5tO6Fv+H4NX0/9sA/ecgJMUCXbp0DswxvuQFw1kgZ/kFm4KF8MwEGAZA/0asl666TMUuYDIj5hV7xRtFgyJ5v1Jk8xxw819MkYcowPCJj/Dgpbie/fKAXCWwhYyXDKB37iSlAiIFoXDr7jtfR5fZ+jwg=', $sign);
     }
 
     /**

@@ -273,7 +273,6 @@ class RequestHandler
         );
 
         $oauthSignature = $this->generateOauthSignature('GET', $serviceUrl, $parts);
-        $parts['oauth_signature'] = $oauthSignature;
         $options = [
             'headers' => [
                 'Authorization' => 'OAuth ' . join(',', array_map(function ($key, $value) {
@@ -328,7 +327,7 @@ class RequestHandler
         }
 
         $oauthSignature = $this->generateOauthSignature($httpMethod, $service, $signParameters);
-        $authToken[] .= sprintf('oauth_signature="%s"', $oauthSignature);
+        $authToken['oauth_signature'] = $oauthSignature;
 
         $options = [
             'headers' => [
@@ -385,8 +384,8 @@ class RequestHandler
         $sbs = sprintf(
             '%s&%s&%s',
             $method,
-            $this->oauthEscape($path),
-            $this->sortParameters($parameters)
+            $this->oauthEscape($this->endpoint . '/' . $path),
+            $this->oauthEscape($this->sortParameters($parameters))
         );
 
         openssl_sign($sbs, $signature, $privateKey);
