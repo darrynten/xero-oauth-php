@@ -277,7 +277,8 @@ class RequestHandler
             'headers' => [
                 'Authorization' => 'OAuth ' . join(',', array_map(function ($key, $value) {
                     return sprintf('%s=%s', $key, $value);
-                }, array_keys($parts), $parts))
+                }, array_keys($parts), $parts)),
+                'Accept' => 'application/json'
             ]
         ];
 
@@ -333,7 +334,8 @@ class RequestHandler
             'headers' => [
                 'Authorization' => 'OAuth ' . join(',', array_map(function ($key, $value) {
                     return sprintf('%s=%s', $key, $value);
-                }, array_keys($authToken), $authToken))
+                }, array_keys($authToken), $authToken)),
+                'Accept' => 'application/json'
             ]
         ];
 
