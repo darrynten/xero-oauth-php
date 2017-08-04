@@ -231,29 +231,29 @@ class RequestHandler
     private function getAuthToken()
     {
         $parts = [
-            'oauth_consumer_key=' . $this->key,
-            'oauth_signature_method=' . $this->signatureMethod,
-            'oauth_timestamp=' . time(),
-            'oauth_nonce=' . uniqid('xero', true),
-            'oauth_callback=' . $this->callbackUrl,
-            'oauth_version=' . static::OAUTH_VERSION,
+            'oauth_consumer_key' => $this->key,
+            'oauth_signature_method' => $this->signatureMethod,
+            'oauth_timestamp' => time(),
+            'oauth_nonce' => uniqid('xero', true),
+            'oauth_callback' => $this->callbackUrl,
+            'oauth_version' => static::OAUTH_VERSION,
         ];
 
         if (!$this->token) {
             $this->getRequestToken($parts);
         }
 
-        $parts[ 'oauth_token' ] = $this->token;
+        $parts['oauth_token'] = $this->token;
 
         if ($this->tokenVerifier) {
-            $parts[ 'oauth_verifier' ] = $this->tokenVerifier;
+            $parts['oauth_verifier'] = $this->tokenVerifier;
         }
 
         if ($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime()) {
             $this->getRequestToken($parts);
         }
 
-        return 'OAuth ' . join(',', $parts);
+        return $parts;
     }
 
     /**
@@ -263,25 +263,32 @@ class RequestHandler
      */
     private function getRequestToken(array $parts = [])
     {
+        $mode = $this->token ? static::ACCESS_TOKEN : static::REQUEST_TOKEN;
+
+        $serviceUrl = sprintf(
+            '%s/%s/%s',
+            $this->endpoint,
+            'oauth',
+            $mode
+        );
+
+        $oauthSignature = $this->generateOauthSignature('GET', $serviceUrl, $parts);
+        $parts['oauth_signature'] = $oauthSignature;
         $options = [
             'headers' => [
-                'Authorization' => 'OAuth ' . join(',', $parts),
+                'Authorization' => 'OAuth ' . join(',', array_map(function ($key, $value) {
+                    return sprintf('%s=%s', $key, $value);
+                }, array_keys($parts), $parts))
             ]
         ];
 
         // todo: We must sign each request
 
         $parameters = [ ];
-        $mode = $this->token ? static::ACCESS_TOKEN : static::REQUEST_TOKEN;
 
         $tokenData = $this->handleRequest(
             'GET',
-            sprintf(
-                '%s/%s/%s',
-                $this->endpoint,
-                'oauth',
-                $mode
-            ),
+            $serviceUrl,
             $options,
             $parameters
         );
@@ -310,9 +317,24 @@ class RequestHandler
      */
     public function request($httpMethod, $service, $parameters = [ ])
     {
+        $authToken = $this->getAuthToken();
+
+        $signParameters = $authToken;
+
+        if ($httpMethod === 'GET') {
+            foreach ($parameters as $key => $value) {
+                $signParameters[$key] = $value;
+            }
+        }
+
+        $oauthSignature = $this->generateOauthSignature($httpMethod, $service, $signParameters);
+        $authToken[] .= sprintf('oauth_signature="%s"', $oauthSignature);
+
         $options = [
             'headers' => [
-                'Authorization' => $this->getAuthToken(),
+                'Authorization' => 'OAuth ' . join(',', array_map(function ($key, $value) {
+                    return sprintf('%s=%s', $key, $value);
+                }, array_keys($authToken), $authToken))
             ]
         ];
 
@@ -337,6 +359,9 @@ class RequestHandler
             case 'RSA-SHA1':
                 return $this->generateRSASHA1Signature($method, $path, $parameters);
                 break;
+            case 'HMAC-SHA1':
+                return 'stub data';
+                break;
             default:
                 throw new ConfigException(ConfigException::UNKNOWN_SIGNATURE_METHOD, $this->signatureMethod);
         }
@@ -360,7 +385,7 @@ class RequestHandler
         $sbs = sprintf(
             '%s&%s&%s',
             $method,
-            $path,
+            $this->oauthEscape($path),
             $this->sortParameters($parameters)
         );
 

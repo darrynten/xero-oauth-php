@@ -141,7 +141,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $sign = $this->handler->generateOAuthSignature('GET', '/', [
             'key' => 'value'
         ]);
-        $this->assertEquals('BPKGYjZR33z/nDeKU7SElz1rAmXVu2kmxDaffo9ZGb+rlPtQlL3LGmqbIUBchLSgtw12ZcwXxxCpD1swlEsuvY0nJrfO2nd9YsPZojy0w6oMvfhfKBB1Xru5bT7Y3iN94ypGirDa4edZIIVeFOS+SfDe1RNOGiNA/w+MiQ+nhZg=', $sign);
+        $this->assertEquals('rH4jh6gfJc0GvOkhwXuFFjq8It5b/hMISuVfmqboI0qyxoFWCpd8j/Cgo5WuhYq9BVUPjSopbsDsrfnGX+rdC9AZv4Z+BVTjZEMK6sfPyhCyOqaXvZZF0+NofyVLkORQACwxRFV5Nn0VIsBFcAgjtemdl3Y0DFzcCZbyBKgLbMw=', $sign);
     }
 
     /**
