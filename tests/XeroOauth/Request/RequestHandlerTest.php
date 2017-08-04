@@ -143,9 +143,38 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         ]);
         $this->assertEquals('SNxd1VSuQpIcr642qaRFQcXPGJySRZ9PKacY+MUTnhZH50cX/je9nbNIdvlsb2b1uzTrfIRl5wWuxo6cBZd3nT5NYQnrEjgk1lhHP9yN+GQ8pbA8tYJdfVQqhvJK8mIApt7x7L4GxoPcV5tlRldvhYegqshu1cXP4ZBUznyswVk=', $sign);
         $sign = $this->handler->generateOAuthSignature('GET', '/', [
-            'key' => 'value2'
+            'key' => [
+                'value1', 'value2'
+            ]
         ]);
-        $this->assertEquals('MEu45ZNC6Ggf1IILCWw5tO6Fv+H4NX0/9sA/ecgJMUCXbp0DswxvuQFw1kgZ/kFm4KF8MwEGAZA/0asl666TMUuYDIj5hV7xRtFgyJ5v1Jk8xxw819MkYcowPCJj/Dgpbie/fKAXCWwhYyXDKB37iSlAiIFoXDr7jtfR5fZ+jwg=', $sign);
+        $this->assertEquals('D0xizy4GYZ9Vfq4ZdcQJ15eLNXD6ZPV7DNbrjN96Js0c79lj2g9rwWSrdDYSMGcK2UCoT/lmIyiEyNGhvj7qxm6gl6rceO2eGsCpihF/m0jel8v6JIbC+3jyWmePGsqoKKRAt0ZD/tu/YADvYL1A1TV58Wffbs2qsVwzJipnWHk=', $sign);
+    }
+
+    /**
+     * Checks if we can send right request
+     */
+    public function testCorrectPrivateKeyRequest()
+    {
+        $this->config['sign_with'] = 'RSA-SHA1';
+        $this->config['private_key'] = __DIR__ . '/../../mocks/Oauth/Private/privatekey.pem';
+
+        $result = \GuzzleHttp\json_encode(['OK' => true]);
+        $method = 'GET';
+        $uri = 'test-uri';
+        $parameters = ['key' => 'value'];
+
+        $this->setUpMockClient([
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                $result
+            ),
+        ]);
+
+        $this->assertEquals(
+            \GuzzleHttp\json_decode($result),
+            $this->handler->handleRequest($method, $uri, $parameters)
+        );
     }
 
     /**

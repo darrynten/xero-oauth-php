@@ -273,6 +273,8 @@ class RequestHandler
         );
 
         $oauthSignature = $this->generateOauthSignature('GET', $serviceUrl, $parts);
+        $parts['oauth_signature'] = $oauthSignature;
+
         $options = [
             'headers' => [
                 'Authorization' => 'OAuth ' . join(',', array_map(function ($key, $value) {
@@ -374,9 +376,9 @@ class RequestHandler
             throw new ConfigException(ConfigException::PRIVATE_KEY_NOT_FOUND, $this->privateKey);
         }
 
-        $fp = fopen($this->privateKey, 'r');
-        $contents = fread($fp, 8192);
-        fclose($fp);
+        $file = fopen($this->privateKey, 'r');
+        $contents = fread($file, 8192);
+        fclose($file);
 
         $privateKey = openssl_pkey_get_private($contents);
         if ($privateKey === false) {
