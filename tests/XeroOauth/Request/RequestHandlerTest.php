@@ -105,7 +105,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
      *
      * @expectedException \DarrynTen\XeroOauth\Exception\ConfigException
      * @expectedExceptionCode 11006
-     * @expectedExceptionMessage Config error /home/ch/xero-oauth-php/tests/XeroOauth/Request/../../mocks/Oauth/Private/privatekey_invalid.pem Private key invalid
+     * @expectedExceptionMessage ../../mocks/Oauth/Private/privatekey_invalid.pem Private key invalid
      */
     public function testInvalidPrivateKey()
     {
