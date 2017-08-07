@@ -154,7 +154,10 @@ class RequestHandler
         $this->tokenVerifier = $config['verifier'];
         $this->signatureMethod = $config['sign_with'];
 
-        $this->privateKey = isset($config['private_key']) ? $config['private_key'] : null;
+        $this->privateKey = null;
+        if (isset($config['private_key'])) {
+            $this->privateKey = $config['private_key'];
+        }
 
         $this->client = new Client();
     }
@@ -400,7 +403,17 @@ class RequestHandler
     }
 
     /**
-     * Sorts query parameters
+     * Sorts query parameters (https://oauth.net/core/1.0a/#anchor13)
+     * The request parameters are collected, sorted and concatenated into a normalized string:
+     * Parameters in the OAuth HTTP Authorization header excluding the realm parameter.
+     * Parameters in the HTTP POST request body (with a content-type of application/x-www-form-urlencoded).
+     * HTTP GET parameters added to the URLs in the query part
+     * The oauth_signature parameter MUST be excluded.
+     * Parameters are sorted by name, using lexicographical byte value ordering
+     * If two or more parameters share the same name, they are sorted by their value.
+     * For each parameter, the name is separated from the corresponding value by an '=' character
+     * even if the value is empty.
+     * Each name-value pair is separated by an '&' character
      * @param array $parameters
      */
     protected function sortParameters(array $parameters)
@@ -428,6 +441,9 @@ class RequestHandler
 
     /**
      * Escapes all special symbols for query
+     * All parameter names and values are escaped using the percent-encoding (%xx) mechanism.
+     * Characters not in the unreserved character set ([RFC3986] section 2.3) MUST be encoded.
+     * Characters in the unreserved character set MUST NOT be encoded.
      * @param string $string
      */
     protected function oauthEscape(string $string)
@@ -436,12 +452,6 @@ class RequestHandler
             return '';
         }
         $string = rawurlencode($string);
-        $string = str_replace('+', '%20', $string);
-        $string = str_replace('!', '%21', $string);
-        $string = str_replace('*', '%2A', $string);
-        $string = str_replace('\'', '%27', $string);
-        $string = str_replace('(', '%28', $string);
-        $string = str_replace(')', '%29', $string);
         return $string;
     }
 }

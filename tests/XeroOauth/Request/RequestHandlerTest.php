@@ -148,6 +148,10 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             ]
         ]);
         $this->assertEquals('D0xizy4GYZ9Vfq4ZdcQJ15eLNXD6ZPV7DNbrjN96Js0c79lj2g9rwWSrdDYSMGcK2UCoT/lmIyiEyNGhvj7qxm6gl6rceO2eGsCpihF/m0jel8v6JIbC+3jyWmePGsqoKKRAt0ZD/tu/YADvYL1A1TV58Wffbs2qsVwzJipnWHk=', $sign);
+        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+            'key' => 'some+value_with(many){special} symbols<>!*\''
+        ]);
+        $this->assertEquals('MOmKJEoyDB5D3h/7bmHK+AZ3RsBIuXk4voeDEtEqgBk2MX+/9JXLTFh89dHaNPQcARg4n7t69mtMF6RljIISIzV4h3jUftIIDCu/vucyW4jPYubugWJPyiu7pkg4BaKABEXiDoQ7OpI9RDMY/mzcqFZUwWvpbaek9G4xu5TeCLM=', $sign);
     }
 
     /**
