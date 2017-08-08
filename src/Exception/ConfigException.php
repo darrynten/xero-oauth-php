@@ -24,7 +24,10 @@ class ConfigException extends Exception
     const MISSING_KEY = 11001;
     const MISSING_APPLICATION_TYPE = 11002;
     const UNKNOWN_APPLICATION_TYPE = 11003;
-    // number constants up from this number - 11004 is next
+    const UNKNOWN_SIGNATURE_METHOD = 11004;
+    const PRIVATE_KEY_NOT_FOUND = 11005;
+    const PRIVATE_KEY_INVALID = 11006;
+    // number constants up from this number - 11007 is next
 
     /**
      * Custom validation exception handler

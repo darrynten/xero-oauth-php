@@ -2,6 +2,7 @@
 namespace DarrynTen\XeroOauth\Tests\XeroOauth\Request;
 
 use DarrynTen\XeroOauth\Request\RequestHandler;
+use DarrynTen\XeroOauth\Exception\ConfigException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Handler\MockHandler;
@@ -83,6 +84,101 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             ),
         ]);
         $this->handler->handleRequest('GET', static::TEST_URI, [ ]);
+    }
+
+    /**
+     * Checks if current handler throws right exception in case of wrong signature method
+     *
+     * @expectedException \DarrynTen\XeroOauth\Exception\ConfigException
+     * @expectedExceptionCode 11004
+     * @expectedExceptionMessage Config error MD5 Unknown signature method
+     */
+    public function testWrongSignature()
+    {
+        $this->config['sign_with'] = 'MD5';
+        $this->handler = new RequestHandler($this->config);
+        $this->handler->generateOAuthSignature('GET', '/');
+    }
+
+    /**
+     * Checks if current handler throws right exception in case of wrong private key contents
+     *
+     * @expectedException \DarrynTen\XeroOauth\Exception\ConfigException
+     * @expectedExceptionCode 11006
+     * @expectedExceptionMessage ../../mocks/Oauth/Private/privatekey_invalid.pem Private key invalid
+     */
+    public function testInvalidPrivateKey()
+    {
+        $this->config['sign_with'] = 'RSA-SHA1';
+        $this->config['private_key'] = __DIR__ . '/../../mocks/Oauth/Private/privatekey_invalid.pem';
+        $this->handler = new RequestHandler($this->config);
+        $this->handler->generateOAuthSignature('GET', '/');
+    }
+
+    /**
+     * Checks if current handler throws right exception in case of wrong private key path
+     *
+     * @expectedException \DarrynTen\XeroOauth\Exception\ConfigException
+     * @expectedExceptionCode 11005
+     * @expectedExceptionMessage Config error /tmp/some-file-does-not-exist Private key not found
+     */
+    public function testWrongPrivateKeyPath()
+    {
+        $this->config['sign_with'] = 'RSA-SHA1';
+        $this->config['private_key'] = '/tmp/some-file-does-not-exist';
+        $this->handler = new RequestHandler($this->config);
+        $this->handler->generateOAuthSignature('GET', '/');
+    }
+
+    /**
+     * Checks if we can open private key and generate signature
+     */
+    public function testCorrectPrivateKey()
+    {
+        $this->config['sign_with'] = 'RSA-SHA1';
+        $this->config['private_key'] = __DIR__ . '/../../mocks/Oauth/Private/privatekey.pem';
+        $this->handler = new RequestHandler($this->config);
+        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+            'key' => 'value'
+        ]);
+        $this->assertEquals('SNxd1VSuQpIcr642qaRFQcXPGJySRZ9PKacY+MUTnhZH50cX/je9nbNIdvlsb2b1uzTrfIRl5wWuxo6cBZd3nT5NYQnrEjgk1lhHP9yN+GQ8pbA8tYJdfVQqhvJK8mIApt7x7L4GxoPcV5tlRldvhYegqshu1cXP4ZBUznyswVk=', $sign);
+        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+            'key' => [
+                'value1', 'value2'
+            ]
+        ]);
+        $this->assertEquals('D0xizy4GYZ9Vfq4ZdcQJ15eLNXD6ZPV7DNbrjN96Js0c79lj2g9rwWSrdDYSMGcK2UCoT/lmIyiEyNGhvj7qxm6gl6rceO2eGsCpihF/m0jel8v6JIbC+3jyWmePGsqoKKRAt0ZD/tu/YADvYL1A1TV58Wffbs2qsVwzJipnWHk=', $sign);
+        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+            'key' => 'some+value_with(many){special} symbols<>!*\''
+        ]);
+        $this->assertEquals('MOmKJEoyDB5D3h/7bmHK+AZ3RsBIuXk4voeDEtEqgBk2MX+/9JXLTFh89dHaNPQcARg4n7t69mtMF6RljIISIzV4h3jUftIIDCu/vucyW4jPYubugWJPyiu7pkg4BaKABEXiDoQ7OpI9RDMY/mzcqFZUwWvpbaek9G4xu5TeCLM=', $sign);
+    }
+
+    /**
+     * Checks if we can send right request
+     */
+    public function testCorrectPrivateKeyRequest()
+    {
+        $this->config['sign_with'] = 'RSA-SHA1';
+        $this->config['private_key'] = __DIR__ . '/../../mocks/Oauth/Private/privatekey.pem';
+
+        $result = \GuzzleHttp\json_encode(['OK' => true]);
+        $method = 'GET';
+        $uri = 'test-uri';
+        $parameters = ['key' => 'value'];
+
+        $this->setUpMockClient([
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                $result
+            ),
+        ]);
+
+        $this->assertEquals(
+            \GuzzleHttp\json_decode($result),
+            $this->handler->handleRequest($method, $uri, $parameters)
+        );
     }
 
     /**
