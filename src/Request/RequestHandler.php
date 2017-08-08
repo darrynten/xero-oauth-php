@@ -17,8 +17,6 @@ use DarrynTen\XeroOauth\Exception\ConfigException;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Exception\ClientException;
-use GuzzleHttp\Exception\ServerException;
 
 /**
  * RequestHandler Class
@@ -448,10 +446,6 @@ class RequestHandler
      */
     protected function oauthEscape(string $string)
     {
-        if (empty($string)) {
-            return '';
-        }
-        $string = rawurlencode($string);
-        return $string;
+        return rawurlencode($string);
     }
 }
