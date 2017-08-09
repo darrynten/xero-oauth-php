@@ -239,7 +239,6 @@ class RequestHandler
             'oauth_callback' => $this->callbackUrl,
             'oauth_version' => static::OAUTH_VERSION,
         ];
-
         if (!$this->token) {
             $this->getRequestToken($parts);
         }
@@ -364,13 +363,19 @@ class RequestHandler
                 return $this->generateRSASHA1Signature($method, $path, $parameters);
                 break;
             case 'HMAC-SHA1':
-                return 'stub data';
+                return $this->generateHMACSHA1Signature($method, $path, $parameters);
                 break;
             default:
                 throw new ConfigException(ConfigException::UNKNOWN_SIGNATURE_METHOD, $this->signatureMethod);
         }
     }
 
+    /**
+     * Generates oauth signature for RSA-SHA1 method
+     * @param string $method
+     * @param string $path
+     * @param array $parameters
+     */
     protected function generateRSASHA1Signature(string $method, string $path, array $parameters)
     {
         if (!file_exists($this->privateKey)) {
@@ -398,6 +403,33 @@ class RequestHandler
         openssl_free_key($privateKey);
 
         return base64_encode($signature);
+    }
+
+    /**
+     * Generates oauth signature for HMAC-SHA1 method
+     * @param string $method
+     * @param string $path
+     * @param array $parameters
+     */
+    protected function generateHMACSHA1Signature(string $method, string $path, array $parameters)
+    {
+        $secretKey = '';
+        $secretKey = $this->secret;
+        $secretKey .= '&';
+        if (!empty($this->tokenSecret)) {
+            $secretKey .= $this->tokenSecret;
+        }
+
+        $sbs = sprintf(
+            '%s&%s&%s',
+            $method,
+            $this->oauthEscape($this->endpoint . '/' . $path),
+            $this->oauthEscape($this->sortParameters($parameters))
+        );
+
+        return base64_encode(
+            hash_hmac('sha1', $sbs, $secretKey, true)
+        );
     }
 
     /**

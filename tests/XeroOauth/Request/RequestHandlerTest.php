@@ -182,6 +182,29 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Checks signature for HMAC-SHA1 signing
+     */
+    public function testHMACSHA1Signature()
+    {
+        $this->config['sign_with'] = 'HMAC-SHA1';
+        $this->handler = new RequestHandler($this->config);
+        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+            'key' => 'value'
+        ]);
+        $this->assertEquals('iTrN2zlsJ2PWouwCZ+uOc0sIWJs=', $sign);
+        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+            'key' => [
+                'value1', 'value2'
+            ]
+        ]);
+        $this->assertEquals('aumvVj6Ea9BtetF7S+FMGiMC878=', $sign);
+        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+            'key' => 'some+value_with(many){special} symbols<>!*\''
+        ]);
+        $this->assertEquals('0DUwG2AGtXs1r/GzUmZOOpZXMlY=', $sign);
+    }
+
+    /**
      * Tests if current handler reacts right on different HTTP method requests
      *
      * @dataProvider dataProvider
