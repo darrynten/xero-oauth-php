@@ -138,20 +138,20 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $this->config['sign_with'] = 'RSA-SHA1';
         $this->config['private_key'] = __DIR__ . '/../../mocks/Oauth/Private/privatekey.pem';
         $this->handler = new RequestHandler($this->config);
-        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+        $sign = $this->handler->generateOAuthSignature('GET', $this->config['endpoint'] . '/', [
             'key' => 'value'
         ]);
-        $this->assertEquals('SNxd1VSuQpIcr642qaRFQcXPGJySRZ9PKacY+MUTnhZH50cX/je9nbNIdvlsb2b1uzTrfIRl5wWuxo6cBZd3nT5NYQnrEjgk1lhHP9yN+GQ8pbA8tYJdfVQqhvJK8mIApt7x7L4GxoPcV5tlRldvhYegqshu1cXP4ZBUznyswVk=', $sign);
-        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+        $this->assertEquals('sMhNGvRFVu1jjg8KgE1Loz3NHeQ0SVizSC/gJppMHpqlQrzYuHWCp+BXOHsNfcjwWK6rhxmhwu026m5OlcWO/W8RbQPh8x6kxl/HDU2mn31xXk1rqcNhWSkI2qp3WpZ+3F/BVWIIdR9iT/3tziaRMTL7MmB8ZeMPiV87wbhI/8M=', $sign);
+        $sign = $this->handler->generateOAuthSignature('GET', $this->config['endpoint'] . '/', [
             'key' => [
                 'value1', 'value2'
             ]
         ]);
-        $this->assertEquals('D0xizy4GYZ9Vfq4ZdcQJ15eLNXD6ZPV7DNbrjN96Js0c79lj2g9rwWSrdDYSMGcK2UCoT/lmIyiEyNGhvj7qxm6gl6rceO2eGsCpihF/m0jel8v6JIbC+3jyWmePGsqoKKRAt0ZD/tu/YADvYL1A1TV58Wffbs2qsVwzJipnWHk=', $sign);
-        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+        $this->assertEquals('HOW+ZmwzjC1rXVXLzyBVxUePRITTRxgpU1ZpSgGEGFPhkZZC1a1KZnZ2MVe23+0BSH9hDfLhFloF6P7NJljRaZmQIs+e4P0iNQCZ0t7n7dImJqEQi+dtvvhmVVH6a8r/0AdL4Ckkie20OCSQ0zotzC5zoMtbv6dYLq0ChDmAdK0=', $sign);
+        $sign = $this->handler->generateOAuthSignature('GET', $this->config['endpoint'] . '/', [
             'key' => 'some+value_with(many){special} symbols<>!*\''
         ]);
-        $this->assertEquals('MOmKJEoyDB5D3h/7bmHK+AZ3RsBIuXk4voeDEtEqgBk2MX+/9JXLTFh89dHaNPQcARg4n7t69mtMF6RljIISIzV4h3jUftIIDCu/vucyW4jPYubugWJPyiu7pkg4BaKABEXiDoQ7OpI9RDMY/mzcqFZUwWvpbaek9G4xu5TeCLM=', $sign);
+        $this->assertEquals('MPRY2wIf2lONqd9D0atkUFHB8FZBvvFjUHWe4Cp8DTz0ltvJsixyKYsnYGtYT1UhRdKuRWnzqEbUwM0oJcSZiMO/jhFsUIlwOt1PCY0ZY1T1s6xE0ZMxE6b5/cgZI8dmGWMKL6ZuFIsq+T7JzPXfr5ZV8hyAHT0S3UZwM8Byd0g=', $sign);
     }
 
     /**
@@ -188,20 +188,20 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     {
         $this->config['sign_with'] = 'HMAC-SHA1';
         $this->handler = new RequestHandler($this->config);
-        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+        $sign = $this->handler->generateOAuthSignature('GET', $this->config['endpoint'] . '/', [
             'key' => 'value'
         ]);
-        $this->assertEquals('iTrN2zlsJ2PWouwCZ+uOc0sIWJs=', $sign);
-        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+        $this->assertEquals('lVbOBzouFcQRiEojE7q3ZsNoEto=', $sign);
+        $sign = $this->handler->generateOAuthSignature('GET', $this->config['endpoint'] . '/', [
             'key' => [
                 'value1', 'value2'
             ]
         ]);
-        $this->assertEquals('aumvVj6Ea9BtetF7S+FMGiMC878=', $sign);
-        $sign = $this->handler->generateOAuthSignature('GET', '/', [
+        $this->assertEquals('/CCpy/zVTYPrYQJIb/nT+imlQdw=', $sign);
+        $sign = $this->handler->generateOAuthSignature('GET', $this->config['endpoint'] . '/', [
             'key' => 'some+value_with(many){special} symbols<>!*\''
         ]);
-        $this->assertEquals('0DUwG2AGtXs1r/GzUmZOOpZXMlY=', $sign);
+        $this->assertEquals('6q4LKua/vKE7AuSFqoU26SQ3ovg=', $sign);
     }
 
     /**
@@ -247,11 +247,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             new Response(
                 200,
                 [ 'ContentType: application/json' ],
-                \GuzzleHttp\json_encode([
-                    'oauth_token' => uniqid('token'),
-                    'oauth_token_secret' => uniqid('secret'),
-                    'oauth_expires_in' => new \DateTime('+2 hours')
-                ])
+                'oauth_token=FT24XKBIJMGNWRBDCSWXTRHUYS3BZA&oauth_token_secret=MX9WR46QZAVCIQGA4EIM1RITMZARMT&oauth_callback_confirmed=true'
             ),
             new Response(
                 200,

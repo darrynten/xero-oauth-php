@@ -73,6 +73,13 @@ class RequestHandler
     private $endpoint;
 
     /**
+     * The oauth endpoint that gets passed in from config
+     *
+     * @var string $endpoint
+     */
+    private $oauthEndpoint;
+
+    /**
      * Authorization token
      *
      * @var string $token
@@ -143,6 +150,9 @@ class RequestHandler
     {
         $this->key = $config['key'];
         $this->endpoint = $config['endpoint'];
+        if (isset($config['oauth_endpoint'])) {
+            $this->oauthEndpoint = $config['oauth_endpoint'];
+        }
         $this->secret = $config['secret'];
         $this->callbackUrl = $config['callback_url'];
 
@@ -172,7 +182,7 @@ class RequestHandler
      * @see RequestHandler::request()
      *
      */
-    public function handleRequest(string $method, string $uri, array $options, array $parameters = [])
+    public function handleRequest(string $method, string $uri, array $options, array $parameters = [], $contentMethod = 'json_decode')
     {
         if (!in_array($method, $this->verbs)) {
             throw new ApiException('405 Bad HTTP Verb', 405);
@@ -197,7 +207,10 @@ class RequestHandler
             $this->handleException($exception);
         }
 
-        return json_decode($response->getBody());
+        if ($contentMethod) {
+            return $contentMethod($response->getBody()->getContents());
+        }
+        return $response->getBody()->getContents();
     }
 
     /**
@@ -266,9 +279,8 @@ class RequestHandler
         $mode = $this->token ? static::ACCESS_TOKEN : static::REQUEST_TOKEN;
 
         $serviceUrl = sprintf(
-            '%s/%s/%s',
-            $this->endpoint,
-            'oauth',
+            '%s/%s',
+            $this->oauthEndpoint,
             $mode
         );
 
@@ -292,14 +304,18 @@ class RequestHandler
             'GET',
             $serviceUrl,
             $options,
-            $parameters
+            $parameters,
+            null
         );
 
-        $this->token = $tokenData->oauth_token;
-        $this->tokenSecret = $tokenData->oauth_token_secret;
-        if ($this->tokenExpireTime && $tokenData->oauth_expires_in) {
+        $decodedData = [];
+        parse_str($tokenData, $decodedData);
+
+        $this->token = $decodedData['oauth_token'];
+        $this->tokenSecret = $decodedData['oauth_token_secret'];
+        if ($this->tokenExpireTime && isset($decodedData['oauth_expires_in'])) {
             $this->tokenExpireTime = $this->tokenExpireTime->modify(
-                sprinf('%s seconds', $tokenData->oauth_expires_in)
+                sprinf('%s seconds', $decodedData['oauth_expires_in'])
             );
         }
 
@@ -329,7 +345,13 @@ class RequestHandler
             }
         }
 
-        $oauthSignature = $this->generateOauthSignature($httpMethod, $service, $signParameters);
+        $fullUrl = sprintf(
+            '%s/%s',
+            $this->endpoint,
+            $service
+        );
+
+        $oauthSignature = $this->generateOauthSignature($httpMethod, $fullUrl, $signParameters);
         $authToken['oauth_signature'] = $oauthSignature;
 
         $options = [
@@ -343,11 +365,7 @@ class RequestHandler
 
         return $this->handleRequest(
             $httpMethod,
-            sprintf(
-                '%s/%s',
-                $this->endpoint,
-                $service
-            ),
+            $fullUrl,
             $options,
             $parameters
         );
@@ -363,6 +381,7 @@ class RequestHandler
                 return $this->generateRSASHA1Signature($method, $path, $parameters);
                 break;
             case 'HMAC-SHA1':
+                $this->generateHMACSHA1Signature($method, $path, $parameters);
                 return $this->generateHMACSHA1Signature($method, $path, $parameters);
                 break;
             default:
@@ -394,7 +413,7 @@ class RequestHandler
         $sbs = sprintf(
             '%s&%s&%s',
             $method,
-            $this->oauthEscape($this->endpoint . '/' . $path),
+            $this->oauthEscape($path),
             $this->oauthEscape($this->sortParameters($parameters))
         );
 
@@ -423,7 +442,7 @@ class RequestHandler
         $sbs = sprintf(
             '%s&%s&%s',
             $method,
-            $this->oauthEscape($this->endpoint . '/' . $path),
+            $this->oauthEscape($path),
             $this->oauthEscape($this->sortParameters($parameters))
         );
 
