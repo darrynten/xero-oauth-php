@@ -3,6 +3,7 @@ namespace DarrynTen\XeroOauth\Tests\XeroOauth\Request;
 
 use DarrynTen\XeroOauth\Request\RequestHandler;
 use DarrynTen\XeroOauth\Exception\ConfigException;
+use DarrynTen\XeroOauth\Exception\AuthException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Handler\MockHandler;
@@ -229,6 +230,29 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Checks if AuthException is thrown after we receive oauth_token (aka request_token)
+     * @expectedException \DarrynTen\XeroOauth\Exception\AuthException
+     * @expectedExceptionCode 11200
+     * @expectedExceptionMessage Auth error FT24XKBIJMGNWRBDCSWXTRHUYS3BZA User must authorize oauth_token before it can be used
+     */
+    public function testRequestAuthException()
+    {
+        $this->setUpMockClient([
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                'oauth_token=FT24XKBIJMGNWRBDCSWXTRHUYS3BZA&oauth_token_secret=MX9WR46QZAVCIQGA4EIM1RITMZARMT&oauth_callback_confirmed=true'
+            )
+        ]);
+
+        $result = $this->handler->request(
+            'GET',
+            self::TEST_URI,
+            [ ]
+        );
+    }
+
+    /**
      * Checks request method of current handler
      * Checks only case with getting Access Token
      */
@@ -252,16 +276,67 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             new Response(
                 200,
                 [ 'ContentType: application/json' ],
+                'oauth_token=VON4JH67XGQBDAL8ASZQCMYVQRMEZY&oauth_token_secret=0XH8NZTF1TS6GB73PTBDXPPVISQKRS&oauth_expires_in=1800&xero_org_muid=bCjSHi%24ODqQhFUHw4EYtvm'
+            ),
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                $expectedResult
+            ),
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
                 $expectedResult
             ),
         ]);
 
+        try {
+            $result = $this->handler->request(
+                'GET',
+                self::TEST_URI,
+                [ ]
+            );
+        } catch (AuthException $e) {
+            if ($e->getCode() !== AuthException::OAUTH_TOKEN_AUTHORIZATION_EXPECTED) {
+                throw new \Exception(sprintf('Received unexpected exception code %s while auth verification', $e->getCode()));
+            }
+        }
+
+        // now we assume that user authorized our token
+        $authData = $this->handler->getAuthData();
+        $this->assertCount(5, $authData);
+        $this->assertEquals('FT24XKBIJMGNWRBDCSWXTRHUYS3BZA', $authData['oauth_token']);
+        $this->assertEquals('MX9WR46QZAVCIQGA4EIM1RITMZARMT', $authData['oauth_token_secret']);
+        $this->assertEquals('', $authData['oauth_verifier']);
+        $this->assertEquals(false, $authData['token_verified']);
+        $this->assertEquals('', $authData['oauth_expires_in']);
+
         $result = $this->handler->request(
             'GET',
             self::TEST_URI,
-            [ ]
+            []
         );
         $this->assertEquals(\GuzzleHttp\json_decode($expectedResult), $result);
+
+        $result = $this->handler->request(
+            'GET',
+            self::TEST_URI,
+            []
+        );
+        $this->assertEquals(\GuzzleHttp\json_decode($expectedResult), $result);
+
+        $authData = $this->handler->getAuthData();
+        $this->assertCount(5, $authData);
+        $this->assertEquals('VON4JH67XGQBDAL8ASZQCMYVQRMEZY', $authData['oauth_token']);
+        $this->assertEquals('0XH8NZTF1TS6GB73PTBDXPPVISQKRS', $authData['oauth_token_secret']);
+        $this->assertEquals('', $authData['oauth_verifier']); // in real app it will not be empty
+        $this->assertEquals(true, $authData['token_verified']);
+        $this->assertInstanceOf(\DateTime::class, $authData['oauth_expires_in']);
+        $now = new \DateTime();
+        $now->modify('1790 seconds');
+        $this->assertTrue($now < $authData['oauth_expires_in']);
+        $now->modify('10 seconds');
+        $this->assertFalse($now < $authData['oauth_expires_in']);
     }
 
     /**

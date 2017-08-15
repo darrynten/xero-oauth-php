@@ -24,6 +24,11 @@ class ExceptionMessages
         11100 => 'Unknown validation error',
     ];
 
+    // Auth codes 112xx
+    public static $authMessages = [
+        11200 => 'User must authorize oauth_token before it can be used',
+    ];
+
     // Maps to standard HTTP error codes
     public static $strings = [
         400 => '400',

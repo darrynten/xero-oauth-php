@@ -14,6 +14,7 @@ namespace DarrynTen\XeroOauth\Request;
 use DarrynTen\XeroOauth\Exception\ApiException;
 use DarrynTen\XeroOauth\Exception\ExceptionMessages;
 use DarrynTen\XeroOauth\Exception\ConfigException;
+use DarrynTen\XeroOauth\Exception\AuthException;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
@@ -167,6 +168,11 @@ class RequestHandler
             $this->privateKey = $config['private_key'];
         }
 
+        $this->tokenVerified = false;
+        if (isset($config['token_verified'])) {
+            $this->tokenVerified = true;
+        }
+
         $this->client = new Client();
     }
 
@@ -207,10 +213,12 @@ class RequestHandler
             $this->handleException($exception);
         }
 
+        $contents = $response->getBody()->getContents();
+
         if ($contentMethod) {
-            return $contentMethod($response->getBody()->getContents());
+            return $contentMethod($contents);
         }
-        return $response->getBody()->getContents();
+        return $contents;
     }
 
     /**
@@ -252,6 +260,7 @@ class RequestHandler
             'oauth_callback' => $this->callbackUrl,
             'oauth_version' => static::OAUTH_VERSION,
         ];
+
         if (!$this->token) {
             $this->getRequestToken($parts);
         }
@@ -262,11 +271,30 @@ class RequestHandler
             $parts['oauth_verifier'] = $this->tokenVerifier;
         }
 
-        if ($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime()) {
+        if (
+            ($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime())
+            ||
+            !($this->tokenVerified)
+        ) {
             $this->getRequestToken($parts);
+            $parts['oauth_token'] = $this->token;
         }
 
         return $parts;
+    }
+
+    /**
+     * Returns authorization data
+     */
+    public function getAuthData()
+    {
+        return [
+            'oauth_token' => $this->token,
+            'oauth_token_secret' => $this->tokenSecret,
+            'oauth_expires_in' => $this->tokenExpireTime,
+            'oauth_verifier' => $this->tokenVerifier,
+            'token_verified' => $this->tokenVerified,
+        ];
     }
 
     /**
@@ -296,10 +324,7 @@ class RequestHandler
             ]
         ];
 
-        // todo: We must sign each request
-
-        $parameters = [ ];
-
+        $parameters = [];
         $tokenData = $this->handleRequest(
             'GET',
             $serviceUrl,
@@ -313,15 +338,20 @@ class RequestHandler
 
         $this->token = $decodedData['oauth_token'];
         $this->tokenSecret = $decodedData['oauth_token_secret'];
-        if ($this->tokenExpireTime && isset($decodedData['oauth_expires_in'])) {
-            $this->tokenExpireTime = $this->tokenExpireTime->modify(
-                sprinf('%s seconds', $decodedData['oauth_expires_in'])
+
+        if (isset($decodedData['oauth_expires_in'])) {
+            $this->tokenExpireTime = new \DateTime();
+            $this->tokenExpireTime->modify(
+                sprintf('%s seconds', $decodedData['oauth_expires_in'])
             );
         }
 
         if ($mode === static::REQUEST_TOKEN) {
-            // todo: if we work with RequestToken, we need to provide application with AuthorisationURL
-            // todo: Also we should provide current Token Data to the application to store it between the redirects
+            throw new AuthException(AuthException::OAUTH_TOKEN_AUTHORIZATION_EXPECTED, $this->token);
+        }
+
+        if ($mode === static::ACCESS_TOKEN) {
+            $this->tokenVerified = true;
         }
     }
 
@@ -381,7 +411,6 @@ class RequestHandler
                 return $this->generateRSASHA1Signature($method, $path, $parameters);
                 break;
             case 'HMAC-SHA1':
-                $this->generateHMACSHA1Signature($method, $path, $parameters);
                 return $this->generateHMACSHA1Signature($method, $path, $parameters);
                 break;
             default:
