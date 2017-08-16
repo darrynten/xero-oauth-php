@@ -245,7 +245,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             )
         ]);
 
-        $result = $this->handler->request(
+        $this->handler->request(
             'GET',
             self::TEST_URI,
             [ ]
