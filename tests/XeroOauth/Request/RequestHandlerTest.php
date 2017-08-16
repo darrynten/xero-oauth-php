@@ -304,7 +304,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
 
         // now we assume that user authorized our token
         $authData = $this->handler->getAuthData();
-        $this->assertCount(5, $authData);
+        $this->assertCount(7, $authData);
         $this->assertEquals('FT24XKBIJMGNWRBDCSWXTRHUYS3BZA', $authData['oauth_token']);
         $this->assertEquals('MX9WR46QZAVCIQGA4EIM1RITMZARMT', $authData['oauth_token_secret']);
         $this->assertEquals('', $authData['oauth_verifier']);
@@ -326,7 +326,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(\GuzzleHttp\json_decode($expectedResult), $result);
 
         $authData = $this->handler->getAuthData();
-        $this->assertCount(5, $authData);
+        $this->assertCount(7, $authData);
         $this->assertEquals('VON4JH67XGQBDAL8ASZQCMYVQRMEZY', $authData['oauth_token']);
         $this->assertEquals('0XH8NZTF1TS6GB73PTBDXPPVISQKRS', $authData['oauth_token_secret']);
         $this->assertEquals('', $authData['oauth_verifier']); // in real app it will not be empty
@@ -337,6 +337,144 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($now < $authData['oauth_expires_in']);
         $now->modify('10 seconds');
         $this->assertFalse($now < $authData['oauth_expires_in']);
+    }
+
+    /**
+     * Checks for partner app
+     * It works almost like public auth
+     * But AccessToken can be renewed without user's intercation
+     */
+    public function testRequestPartnerApp()
+    {
+        $expectedResult = \GuzzleHttp\json_encode([
+            'status' => 'ready',
+        ]);
+        $expectedResult2 = \GuzzleHttp\json_encode([
+            'status' => 'ready2',
+        ]);
+
+        $this->config['sign_with'] = 'RSA-SHA1';
+        $this->config['private_key'] = __DIR__ . '/../../mocks/Oauth/Private/privatekey.pem';
+        $this->config['oauth_endpoint'] = 'http://localhost:8082/oauth';
+        $this->handler = new RequestHandler($this->config);
+
+        $this->setUpMockClient([
+            // get request token
+            new Response(
+                200,
+                [],
+                'oauth_token=FT24XKBIJMGNWRBDCSWXTRHUYS3BZA&oauth_token_secret=MX9WR46QZAVCIQGA4EIM1RITMZARMT&oauth_callback_confirmed=true'
+            ),
+        ]);
+
+        try {
+            $this->handler->request(
+                'GET',
+                self::TEST_URI,
+                [ ]
+            );
+        } catch (AuthException $e) {
+            if ($e->getCode() !== AuthException::OAUTH_TOKEN_AUTHORIZATION_EXPECTED) {
+                throw new \Exception(sprintf('Received unexpected exception code %s while auth verification', $e->getCode()));
+            }
+        }
+
+        $authData = $this->handler->getAuthData();
+        $this->assertCount(7, $authData);
+        $this->assertEquals('FT24XKBIJMGNWRBDCSWXTRHUYS3BZA', $authData['oauth_token']);
+        $this->assertEquals('MX9WR46QZAVCIQGA4EIM1RITMZARMT', $authData['oauth_token_secret']);
+        $this->assertEquals('', $authData['oauth_verifier']);
+        $this->assertEquals(false, $authData['token_verified']);
+        $this->assertEquals('', $authData['oauth_expires_in']);
+        $this->assertEquals(null, $authData['oauth_session_handle']);
+        $this->assertEquals(null, $authData['oauth_authorization_expires_in']);
+
+        // now we assume that user authorized our token
+        $this->config['token'] = 'FT24XKBIJMGNWRBDCSWXTRHUYS3BZA';
+        $this->config['token_secret'] = 'MX9WR46QZAVCIQGA4EIM1RITMZARMT';
+
+        $this->handler = new RequestHandler($this->config);
+
+        $this->setUpMockClient([
+            // get access token
+            new Response(
+                200,
+                [],
+                'oauth_token=VON4JH67XGQBDAL8ASZQCMYVQRMEZY&oauth_token_secret=0XH8NZTF1TS6GB73PTBDXPPVISQKRS&oauth_expires_in=1800&oauth_session_handle=ODJHMGEZNGVKMGM1NDA1NZG3ZWIWNJ&oauth_authorization_expires_in=31536000'
+            ),
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                $expectedResult
+            ),
+        ]);
+
+        // it should get access token AND the result
+        $result = $this->handler->request(
+            'GET',
+            self::TEST_URI,
+            []
+        );
+        $this->assertEquals(\GuzzleHttp\json_decode($expectedResult), $result);
+
+        $authData = $this->handler->getAuthData();
+        $this->assertCount(7, $authData);
+        $this->assertEquals('VON4JH67XGQBDAL8ASZQCMYVQRMEZY', $authData['oauth_token']);
+        $this->assertEquals('0XH8NZTF1TS6GB73PTBDXPPVISQKRS', $authData['oauth_token_secret']);
+        $this->assertEquals('', $authData['oauth_verifier']);
+        $this->assertEquals(true, $authData['token_verified']);
+        $this->assertInstanceOf(\DateTime::class, $authData['oauth_expires_in']);
+        $this->assertEquals('ODJHMGEZNGVKMGM1NDA1NZG3ZWIWNJ', $authData['oauth_session_handle']);
+        $this->assertInstanceOf(\DateTime::class, $authData['oauth_authorization_expires_in']);
+        $now = new \DateTime();
+        $now->modify('1790 seconds');
+        $this->assertTrue($now < $authData['oauth_expires_in']);
+        $now->modify('10 seconds');
+        $this->assertFalse($now < $authData['oauth_expires_in']);
+        $now = new \DateTime();
+        $now->modify('31535995 seconds');
+        $this->assertTrue($now < $authData['oauth_authorization_expires_in']);
+        $now->modify('5 seconds');
+        $this->assertFalse($now < $authData['oauth_authorization_expires_in']);
+
+        // force token refresh
+        $this->config['token'] = 'VON4JH67XGQBDAL8ASZQCMYVQRMEZY';
+        $this->config['token_secret'] = '0XH8NZTF1TS6GB73PTBDXPPVISQKRS';
+        $this->config['session_handle'] = 'ODJHMGEZNGVKMGM1NDA1NZG3ZWIWNJ';
+        $this->config['authorization_expires_in'] = new \DateTime();
+        $this->config['authorization_expires_in']->modify('-10 seconds'); // force expiration
+
+        $this->handler = new RequestHandler($this->config);
+        $this->setUpMockClient([
+            // renew access token
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                'oauth_token=NEWNEW67XGQBDAL8ASZQCMYVQRMEZY&oauth_token_secret=NEWNEWTF1TS6GB73PTBDXPPVISQKRS&oauth_expires_in=1800&oauth_session_handle=NEWNEWEZNGVKMGM1NDA1NZG3ZWIWNJ&oauth_authorization_expires_in=31536000'
+            ),
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                $expectedResult2
+            ),
+        ]);
+
+        $result2 = $this->handler->request(
+            'GET',
+            self::TEST_URI,
+            []
+        );
+        $authData = $this->handler->getAuthData();
+        $this->assertCount(7, $authData);
+        $this->assertEquals('NEWNEW67XGQBDAL8ASZQCMYVQRMEZY', $authData['oauth_token']);
+        $this->assertEquals('NEWNEWTF1TS6GB73PTBDXPPVISQKRS', $authData['oauth_token_secret']);
+        $this->assertEquals('', $authData['oauth_verifier']);
+        $this->assertEquals(true, $authData['token_verified']);
+        $this->assertInstanceOf(\DateTime::class, $authData['oauth_expires_in']);
+        $this->assertEquals('NEWNEWEZNGVKMGM1NDA1NZG3ZWIWNJ', $authData['oauth_session_handle']);
+        $this->assertInstanceOf(\DateTime::class, $authData['oauth_authorization_expires_in']);
+
+        $this->assertEquals(\GuzzleHttp\json_decode($expectedResult2), $result2);
     }
 
     /**

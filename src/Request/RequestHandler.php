@@ -103,6 +103,18 @@ class RequestHandler
     private $tokenExpireTime;
 
     /**
+     * Session Handle used to renew the access token
+     * @var string|null $oauthSessionHandle
+     */
+    private $oauthSessionHandle;
+
+    /**
+     * When session handle expires
+     * @var \DateTime|null $oauthAuthorizationExpiresIn
+     */
+    private $oauthAuthorizationExpiresIn;
+
+    /**
      * Verifier for Auth token
      *
      * @var string $tokenVerifier
@@ -171,6 +183,14 @@ class RequestHandler
         $this->tokenVerified = false;
         if (isset($config['token_verified'])) {
             $this->tokenVerified = true;
+        }
+
+        if (isset($config['session_handle'])) {
+            $this->oauthSessionHandle = $config['session_handle'];
+        }
+
+        if (isset($config['authorization_expires_in'])) {
+            $this->oauthAuthorizationExpiresIn = $config['authorization_expires_in'];
         }
 
         $this->client = new Client();
@@ -271,10 +291,16 @@ class RequestHandler
             $parts['oauth_verifier'] = $this->tokenVerifier;
         }
 
+        if ($this->oauthSessionHandle) {
+            $parts['oauth_session_handle'] = $this->oauthSessionHandle;
+        }
+
         if (
             ($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime())
             ||
             !($this->tokenVerified)
+            ||
+            ($this->oauthAuthorizationExpiresIn && $this->oauthAuthorizationExpiresIn < new \DateTime())
         ) {
             $this->getRequestToken($parts);
             $parts['oauth_token'] = $this->token;
@@ -294,6 +320,8 @@ class RequestHandler
             'oauth_expires_in' => $this->tokenExpireTime,
             'oauth_verifier' => $this->tokenVerifier,
             'token_verified' => $this->tokenVerified,
+            'oauth_session_handle' => $this->oauthSessionHandle,
+            'oauth_authorization_expires_in' => $this->oauthAuthorizationExpiresIn,
         ];
     }
 
@@ -344,6 +372,17 @@ class RequestHandler
             $this->tokenExpireTime->modify(
                 sprintf('%s seconds', $decodedData['oauth_expires_in'])
             );
+        }
+
+        if (isset($decodedData['oauth_session_handle'])) {
+            $this->oauthSessionHandle = $decodedData['oauth_session_handle'];
+        }
+
+        if (isset($decodedData['oauth_authorization_expires_in'])) {
+            $this->oauthAuthorizationExpiresIn = new \DateTime();
+            $this->oauthAuthorizationExpiresIn->modify(
+                sprintf('%s seconds', $decodedData['oauth_authorization_expires_in']
+            ));
         }
 
         if ($mode === static::REQUEST_TOKEN) {
