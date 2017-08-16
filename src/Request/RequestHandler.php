@@ -208,8 +208,13 @@ class RequestHandler
      * @see RequestHandler::request()
      *
      */
-    public function handleRequest(string $method, string $uri, array $options, array $parameters = [], $contentMethod = null)
-    {
+    public function handleRequest(
+        string $method,
+        string $uri,
+        array $options,
+        array $parameters = [],
+        $contentMethod = null
+    ) {
         if (!in_array($method, $this->verbs)) {
             throw new ApiException('405 Bad HTTP Verb', 405);
         }
@@ -235,10 +240,9 @@ class RequestHandler
 
         $contents = $response->getBody()->getContents();
 
-        if ($contentMethod) {
-            return $contentMethod($contents);
-        }
-        return $contents;
+        $result = $contentMethod ? $contentMethod($contents) : $contents;
+
+        return $result;
     }
 
     /**
@@ -295,8 +299,7 @@ class RequestHandler
             $parts['oauth_session_handle'] = $this->oauthSessionHandle;
         }
 
-        if (
-            ($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime())
+        if (($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime())
             ||
             !($this->tokenVerified)
             ||
@@ -380,8 +383,8 @@ class RequestHandler
         if (isset($decodedData['oauth_authorization_expires_in'])) {
             $this->oauthAuthorizationExpiresIn = new \DateTime();
             $this->oauthAuthorizationExpiresIn->modify(
-                sprintf('%s seconds', $decodedData['oauth_authorization_expires_in']
-            ));
+                sprintf('%s seconds', $decodedData['oauth_authorization_expires_in'])
+            );
         }
 
         if ($mode === static::REQUEST_TOKEN) {
