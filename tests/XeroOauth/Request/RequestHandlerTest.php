@@ -178,7 +178,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals(
             \GuzzleHttp\json_decode($result),
-            $this->handler->handleRequest($method, $uri, $parameters)
+            $this->handler->handleRequest($method, $uri, $parameters, [ ], 'json_decode')
         );
     }
 
@@ -225,7 +225,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals(
             \GuzzleHttp\json_decode($result),
-            $this->handler->handleRequest($method, $uri, [ ])
+            $this->handler->handleRequest($method, $uri, [ ], [ ], 'json_decode')
         );
     }
 

@@ -208,7 +208,7 @@ class RequestHandler
      * @see RequestHandler::request()
      *
      */
-    public function handleRequest(string $method, string $uri, array $options, array $parameters = [], $contentMethod = 'json_decode')
+    public function handleRequest(string $method, string $uri, array $options, array $parameters = [], $contentMethod = null)
     {
         if (!in_array($method, $this->verbs)) {
             throw new ApiException('405 Bad HTTP Verb', 405);
@@ -357,8 +357,7 @@ class RequestHandler
             'GET',
             $serviceUrl,
             $options,
-            $parameters,
-            null
+            $parameters
         );
 
         $decodedData = [];
@@ -436,7 +435,8 @@ class RequestHandler
             $httpMethod,
             $fullUrl,
             $options,
-            $parameters
+            $parameters,
+            'json_decode'
         );
     }
 
