@@ -14,6 +14,7 @@ namespace DarrynTen\XeroOauth\Request;
 use DarrynTen\XeroOauth\Exception\ApiException;
 use DarrynTen\XeroOauth\Exception\ExceptionMessages;
 use DarrynTen\XeroOauth\Exception\ConfigException;
+use DarrynTen\XeroOauth\Exception\AuthException;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
@@ -29,6 +30,8 @@ use GuzzleHttp\Exception\RequestException;
  */
 class RequestHandler
 {
+    use SignatureSigner;
+
     /**
      * Current OAuth version
      */
@@ -73,6 +76,13 @@ class RequestHandler
     private $endpoint;
 
     /**
+     * The oauth endpoint that gets passed in from config
+     *
+     * @var string $endpoint
+     */
+    private $oauthEndpoint;
+
+    /**
      * Authorization token
      *
      * @var string $token
@@ -93,6 +103,18 @@ class RequestHandler
      * @var \DateTime|null $tokenExpireTime
      */
     private $tokenExpireTime;
+
+    /**
+     * Session Handle used to renew the access token
+     * @var string|null $oauthSessionHandle
+     */
+    private $oauthSessionHandle;
+
+    /**
+     * When session handle expires
+     * @var \DateTime|null $oauthAuthorizationExpiresIn
+     */
+    private $oauthAuthorizationExpiresIn;
 
     /**
      * Verifier for Auth token
@@ -143,6 +165,9 @@ class RequestHandler
     {
         $this->key = $config['key'];
         $this->endpoint = $config['endpoint'];
+        if (isset($config['oauth_endpoint'])) {
+            $this->oauthEndpoint = $config['oauth_endpoint'];
+        }
         $this->secret = $config['secret'];
         $this->callbackUrl = $config['callback_url'];
 
@@ -155,6 +180,19 @@ class RequestHandler
         $this->privateKey = null;
         if (isset($config['private_key'])) {
             $this->privateKey = $config['private_key'];
+        }
+
+        $this->tokenVerified = false;
+        if (isset($config['token_verified'])) {
+            $this->tokenVerified = true;
+        }
+
+        if (isset($config['session_handle'])) {
+            $this->oauthSessionHandle = $config['session_handle'];
+        }
+
+        if (isset($config['authorization_expires_in'])) {
+            $this->oauthAuthorizationExpiresIn = $config['authorization_expires_in'];
         }
 
         $this->client = new Client();
@@ -172,8 +210,13 @@ class RequestHandler
      * @see RequestHandler::request()
      *
      */
-    public function handleRequest(string $method, string $uri, array $options, array $parameters = [])
-    {
+    public function handleRequest(
+        string $method,
+        string $uri,
+        array $options,
+        array $parameters = [],
+        $contentMethod = null
+    ) {
         if (!in_array($method, $this->verbs)) {
             throw new ApiException('405 Bad HTTP Verb', 405);
         }
@@ -197,7 +240,11 @@ class RequestHandler
             $this->handleException($exception);
         }
 
-        return json_decode($response->getBody());
+        $contents = $response->getBody()->getContents();
+
+        $result = $contentMethod ? $contentMethod($contents) : $contents;
+
+        return $result;
     }
 
     /**
@@ -250,11 +297,37 @@ class RequestHandler
             $parts['oauth_verifier'] = $this->tokenVerifier;
         }
 
-        if ($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime()) {
+        if ($this->oauthSessionHandle) {
+            $parts['oauth_session_handle'] = $this->oauthSessionHandle;
+        }
+
+        if (($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime())
+            ||
+            !($this->tokenVerified)
+            ||
+            ($this->oauthAuthorizationExpiresIn && $this->oauthAuthorizationExpiresIn < new \DateTime())
+        ) {
             $this->getRequestToken($parts);
+            $parts['oauth_token'] = $this->token;
         }
 
         return $parts;
+    }
+
+    /**
+     * Returns authorization data
+     */
+    public function getAuthData()
+    {
+        return [
+            'oauth_token' => $this->token,
+            'oauth_token_secret' => $this->tokenSecret,
+            'oauth_expires_in' => $this->tokenExpireTime,
+            'oauth_verifier' => $this->tokenVerifier,
+            'token_verified' => $this->tokenVerified,
+            'oauth_session_handle' => $this->oauthSessionHandle,
+            'oauth_authorization_expires_in' => $this->oauthAuthorizationExpiresIn,
+        ];
     }
 
     /**
@@ -267,9 +340,8 @@ class RequestHandler
         $mode = $this->token ? static::ACCESS_TOKEN : static::REQUEST_TOKEN;
 
         $serviceUrl = sprintf(
-            '%s/%s/%s',
-            $this->endpoint,
-            'oauth',
+            '%s/%s',
+            $this->oauthEndpoint,
             $mode
         );
 
@@ -285,10 +357,7 @@ class RequestHandler
             ]
         ];
 
-        // todo: We must sign each request
-
-        $parameters = [ ];
-
+        $parameters = [];
         $tokenData = $this->handleRequest(
             'GET',
             $serviceUrl,
@@ -296,17 +365,36 @@ class RequestHandler
             $parameters
         );
 
-        $this->token = $tokenData->oauth_token;
-        $this->tokenSecret = $tokenData->oauth_token_secret;
-        if ($this->tokenExpireTime && $tokenData->oauth_expires_in) {
-            $this->tokenExpireTime = $this->tokenExpireTime->modify(
-                sprinf('%s seconds', $tokenData->oauth_expires_in)
+        $decodedData = [];
+        parse_str($tokenData, $decodedData);
+
+        $this->token = $decodedData['oauth_token'];
+        $this->tokenSecret = $decodedData['oauth_token_secret'];
+
+        if (isset($decodedData['oauth_expires_in'])) {
+            $this->tokenExpireTime = new \DateTime();
+            $this->tokenExpireTime->modify(
+                sprintf('%s seconds', $decodedData['oauth_expires_in'])
+            );
+        }
+
+        if (isset($decodedData['oauth_session_handle'])) {
+            $this->oauthSessionHandle = $decodedData['oauth_session_handle'];
+        }
+
+        if (isset($decodedData['oauth_authorization_expires_in'])) {
+            $this->oauthAuthorizationExpiresIn = new \DateTime();
+            $this->oauthAuthorizationExpiresIn->modify(
+                sprintf('%s seconds', $decodedData['oauth_authorization_expires_in'])
             );
         }
 
         if ($mode === static::REQUEST_TOKEN) {
-            // todo: if we work with RequestToken, we need to provide application with AuthorisationURL
-            // todo: Also we should provide current Token Data to the application to store it between the redirects
+            throw new AuthException(AuthException::OAUTH_TOKEN_AUTHORIZATION_EXPECTED, $this->token);
+        }
+
+        if ($mode === static::ACCESS_TOKEN) {
+            $this->tokenVerified = true;
         }
     }
 
@@ -330,7 +418,13 @@ class RequestHandler
             }
         }
 
-        $oauthSignature = $this->generateOauthSignature($httpMethod, $service, $signParameters);
+        $fullUrl = sprintf(
+            '%s/%s',
+            $this->endpoint,
+            $service
+        );
+
+        $oauthSignature = $this->generateOauthSignature($httpMethod, $fullUrl, $signParameters);
         $authToken['oauth_signature'] = $oauthSignature;
 
         $options = [
@@ -344,108 +438,10 @@ class RequestHandler
 
         return $this->handleRequest(
             $httpMethod,
-            sprintf(
-                '%s/%s',
-                $this->endpoint,
-                $service
-            ),
+            $fullUrl,
             $options,
-            $parameters
+            $parameters,
+            'json_decode'
         );
-    }
-
-    /**
-     * Generates oauth signature
-     */
-    public function generateOauthSignature(string $method, string $path, array $parameters = [])
-    {
-        switch ($this->signatureMethod) {
-            case 'RSA-SHA1':
-                return $this->generateRSASHA1Signature($method, $path, $parameters);
-                break;
-            case 'HMAC-SHA1':
-                return 'stub data';
-                break;
-            default:
-                throw new ConfigException(ConfigException::UNKNOWN_SIGNATURE_METHOD, $this->signatureMethod);
-        }
-    }
-
-    protected function generateRSASHA1Signature(string $method, string $path, array $parameters)
-    {
-        if (!file_exists($this->privateKey)) {
-            throw new ConfigException(ConfigException::PRIVATE_KEY_NOT_FOUND, $this->privateKey);
-        }
-
-        $file = fopen($this->privateKey, 'r');
-        $contents = fread($file, 8192);
-        fclose($file);
-
-        $privateKey = openssl_pkey_get_private($contents);
-        if ($privateKey === false) {
-            throw new ConfigException(ConfigException::PRIVATE_KEY_INVALID, $this->privateKey);
-        }
-
-        $sbs = sprintf(
-            '%s&%s&%s',
-            $method,
-            $this->oauthEscape($this->endpoint . '/' . $path),
-            $this->oauthEscape($this->sortParameters($parameters))
-        );
-
-        openssl_sign($sbs, $signature, $privateKey);
-
-        openssl_free_key($privateKey);
-
-        return base64_encode($signature);
-    }
-
-    /**
-     * Sorts query parameters (https://oauth.net/core/1.0a/#anchor13)
-     * The request parameters are collected, sorted and concatenated into a normalized string:
-     * Parameters in the OAuth HTTP Authorization header excluding the realm parameter.
-     * Parameters in the HTTP POST request body (with a content-type of application/x-www-form-urlencoded).
-     * HTTP GET parameters added to the URLs in the query part
-     * The oauth_signature parameter MUST be excluded.
-     * Parameters are sorted by name, using lexicographical byte value ordering
-     * If two or more parameters share the same name, they are sorted by their value.
-     * For each parameter, the name is separated from the corresponding value by an '=' character
-     * even if the value is empty.
-     * Each name-value pair is separated by an '&' character
-     * @param array $parameters
-     */
-    protected function sortParameters(array $parameters)
-    {
-        $elements = [];
-        ksort($parameters);
-        foreach ($parameters as $name => $value) {
-            if (is_array($value)) {
-                sort($value);
-                foreach ($value as $element) {
-                    array_push(
-                        $elements,
-                        sprintf('%s=%s', $this->oauthEscape($name), $this->oauthEscape($element))
-                    );
-                }
-                continue;
-            }
-            array_push(
-                $elements,
-                sprintf('%s=%s', $this->oauthEscape($name), $this->oauthEscape($value))
-            );
-        }
-        return join('&', $elements);
-    }
-
-    /**
-     * Escapes all special symbols for query
-     * All parameter names and values are escaped using the percent-encoding (%xx) mechanism.
-     * Characters not in the unreserved character set ([RFC3986] section 2.3) MUST be encoded.
-     * Characters in the unreserved character set MUST NOT be encoded.
-     * @param string $string
-     */
-    protected function oauthEscape(string $string)
-    {
-        return rawurlencode($string);
     }
 }

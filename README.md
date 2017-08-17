@@ -44,6 +44,77 @@ This is the basic outline of the project and is a work in progress.
 
 ## Usage Examples
 
+# Public auth example for RequestHandler
+```php
+$config [
+    'key' => CONSUMER_KEY,
+    'secret' => CONSUMER_SECRET,
+    'sign_with' => 'HMAC-SHA1',
+    // other options
+]
+
+// Get Request Token
+$handler = new RequestHandler($config);
+try {
+    $handler->request('GET', 'Currencies');
+} catch (AuthException $e) {
+    $authData = $handler->getAuthData();
+    // we store oauth_token from $authData and direct user to
+    // https://api.xero.com/oauth/Authorize?oauth_token=REQUEST_TOKEN_HERE
+}
+
+// Get Access Token
+// We assume that user granted access by visiting this url
+// https://app.xero.com/oauth/APIAuthorise?oauth_token=REQUEST_TOKEN_HERE
+$config['token'] = REQUEST_TOKEN_HERE;
+$config['token_secret'] = $authData['oauth_token_secret']; // see above
+$config['oauth_verifier'] = '563499'; // we collect after user grants permission
+$handler = new RequestHandler($config);
+$handler->request('GET', 'Currencies');
+$authData = $handler->getAuthData();
+
+/*
+Array
+(
+    [oauth_token] => ACCESS_TOKEN_HERE
+    [oauth_token_secret] => TOKEN_SECRET_HERE
+    [oauth_expires_in] => DateTime Object
+        (
+            [date] => 2017-08-15 14:03:58.079112
+            [timezone_type] => 3
+            [timezone] => UTC
+        )
+
+    [oauth_verifier] => 563499
+    [token_verified] => true
+)
+// 'token_verified' is true so we can use ACCESS_TOKEN_HERE to make requests
+*/
+
+// Example of real request
+$config['token'] = ACCESS_TOKEN_HERE;
+$config['token_secret'] = TOKEN_SECRET_HERE;
+$config['token_expires_in'] = $datetimeObject; // see above
+$config['token_verified'] = true;
+$handler = new RequestHandler($config);
+$response = $handler->request('GET', 'Currencies');
+
+/*
+{
+  "Id": "4f2d7d6a-6531-4674-87a4-06630ff7eac6",
+  "Status": "OK",
+  "ProviderName": "Testing public app",
+  "DateTimeUTC": "\/Date(1502804191938)\/",
+  "Currencies": [
+    {
+      "Code": "RUB",
+      "Description": "Russian Ruble"
+    }
+  ]
+}
+*/
+```
+
 ### Application base
 
 * Guzzle is used for the communications (I think we should replace?)
