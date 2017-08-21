@@ -301,29 +301,45 @@ class RequestHandler
             $parts['oauth_session_handle'] = $this->oauthSessionHandle;
         }
 
-        $shouldReceiveNewToken = false;
+        $newToken = $this->fetchNewToken($parts);
+        if ($newToken) {
+            $parts['oauth_token'] = $newToken;
+        }
+
+        return $parts;
+    }
+
+    /**
+     * Get new token for Xero API requests
+     *
+     * @param array $parts
+     * @return string|null
+     * @throws ApiException
+     */
+    private function fetchNewToken(array $parts)
+    {
+        $fetchNewToken = false;
         // We should receive new RequestToken when old access token expires for public apps
         if ($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime()) {
             $this->token = '';
             $this->tokenSecret = '';
             unset($parts['oauth_token']);
-            $shouldReceiveNewToken = true;
+            $fetchNewToken = true;
         }
 
         if (!$this->tokenVerified) {
-            $shouldReceiveNewToken = true;
+            $fetchNewToken = true;
         }
 
         if ($this->oauthAuthorizationExpiresIn && $this->oauthAuthorizationExpiresIn < new \DateTime()) {
-            $shouldReceiveNewToken = true;
+            $fetchNewToken = true;
         }
 
-        if ($shouldReceiveNewToken) {
-            $this->getRequestToken($parts);
-            $parts['oauth_token'] = $this->token;
+        if ($fetchNewToken) {
+            return $this->getRequestToken($parts);
         }
 
-        return $parts;
+        return null;
     }
 
     /**
