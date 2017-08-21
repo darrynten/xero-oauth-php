@@ -223,9 +223,11 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             ),
         ]);
 
+        $parameters = ['key' => 'value'];
+
         $this->assertEquals(
             \GuzzleHttp\json_decode($result),
-            $this->handler->handleRequest($method, $uri, [ ], [ ], 'json_decode')
+            $this->handler->handleRequest($method, $uri, [ ], $parameters, 'json_decode')
         );
     }
 
@@ -268,6 +270,8 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $expectedResult2 = \GuzzleHttp\json_encode([
             'status' => 'ready2',
         ]);
+
+        $this->config['verifier'] = '123456';
 
         $this->setUpMockClient([
             new Response(
@@ -316,7 +320,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $result = $this->handler->request(
             'GET',
             self::TEST_URI,
-            []
+            ['key' => 'value']
         );
         $this->assertEquals(\GuzzleHttp\json_decode($expectedResult), $result);
 
@@ -382,7 +386,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(7, $authData);
         $this->assertEquals('NEW4XKBIJMGNWRBDCSWXTRHUYS3BZA', $authData['oauth_token']);
         $this->assertEquals('NEWWR46QZAVCIQGA4EIM1RITMZARMT', $authData['oauth_token_secret']);
-        $this->assertEquals('', $authData['oauth_verifier']);
+        $this->assertEquals('123456', $authData['oauth_verifier']);
         $this->assertEquals(false, $authData['token_verified']);
         $this->assertEquals('', $authData['oauth_expires_in']);
 
@@ -397,7 +401,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(7, $authData);
         $this->assertEquals('NEW4JH67XGQBDAL8ASZQCMYVQRMEZY', $authData['oauth_token']);
         $this->assertEquals('NEW8NZTF1TS6GB73PTBDXPPVISQKRS', $authData['oauth_token_secret']);
-        $this->assertEquals('', $authData['oauth_verifier']); // in real app it will not be empty
+        $this->assertEquals('123456', $authData['oauth_verifier']); // in real app it will not be empty
         $this->assertEquals(true, $authData['token_verified']);
         $this->assertInstanceOf(\DateTime::class, $authData['oauth_expires_in']);
     }
