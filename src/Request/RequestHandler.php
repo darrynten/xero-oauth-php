@@ -301,12 +301,24 @@ class RequestHandler
             $parts['oauth_session_handle'] = $this->oauthSessionHandle;
         }
 
-        if (($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime())
-            ||
-            !($this->tokenVerified)
-            ||
-            ($this->oauthAuthorizationExpiresIn && $this->oauthAuthorizationExpiresIn < new \DateTime())
-        ) {
+        $shouldReceiveNewToken = false;
+        // We should receive new RequestToken when old access token expires for public apps
+        if ($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime()) {
+            $this->token = '';
+            $this->tokenSecret = '';
+            unset($parts['oauth_token']);
+            $shouldReceiveNewToken = true;
+        }
+
+        if (!$this->tokenVerified) {
+            $shouldReceiveNewToken = true;
+        }
+
+        if ($this->oauthAuthorizationExpiresIn && $this->oauthAuthorizationExpiresIn < new \DateTime()) {
+            $shouldReceiveNewToken = true;
+        }
+
+        if ($shouldReceiveNewToken) {
             $this->getRequestToken($parts);
             $parts['oauth_token'] = $this->token;
         }
@@ -390,6 +402,8 @@ class RequestHandler
         }
 
         if ($mode === static::REQUEST_TOKEN) {
+            $this->tokenVerified = false;
+            $this->tokenExpireTime = '';
             throw new AuthException(AuthException::OAUTH_TOKEN_AUTHORIZATION_EXPECTED, $this->token);
         }
 
