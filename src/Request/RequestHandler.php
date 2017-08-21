@@ -124,6 +124,13 @@ class RequestHandler
     private $tokenVerifier;
 
     /**
+     * Indicates if token was verified
+     *
+     * @var bool|null $tokenVerified
+     */
+    private $tokenVerified;
+
+    /**
      * The callback for an Authorization process
      *
      * @var string $callbackUrl
@@ -221,17 +228,7 @@ class RequestHandler
             throw new ApiException('405 Bad HTTP Verb', 405);
         }
 
-        if (!empty($parameters)) {
-            if ($method === 'GET') {
-                // Send as get params
-                foreach ($parameters as $key => $value) {
-                    $options['query'][$key] = $value;
-                }
-            } elseif ($method === 'POST' || $method === 'PUT' || $method === 'DELETE') {
-                // Otherwise send JSON in the body
-                $options['json'] = (object)$parameters;
-            }
-        }
+        $options = $this->getRequestOptions($method, $parameters, $options);
 
         // Let's go
         try {
@@ -245,6 +242,29 @@ class RequestHandler
         $result = $contentMethod ? $contentMethod($contents) : $contents;
 
         return $result;
+    }
+
+    /**
+     * Forms request options
+     * @param string $method
+     * @param array $parameters
+     * @param array $options
+     */
+    private function getRequestOptions($method, $parameters, $options)
+    {
+        if (!empty($parameters)) {
+            if ($method === 'GET') {
+                // Send as get params
+                foreach ($parameters as $key => $value) {
+                    $options['query'][$key] = $value;
+                }
+            } elseif ($method === 'POST' || $method === 'PUT' || $method === 'DELETE') {
+                // Otherwise send JSON in the body
+                $options['json'] = (object)$parameters;
+            }
+        }
+
+        return $options;
     }
 
     /**
@@ -301,17 +321,45 @@ class RequestHandler
             $parts['oauth_session_handle'] = $this->oauthSessionHandle;
         }
 
-        if (($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime())
-            ||
-            !($this->tokenVerified)
-            ||
-            ($this->oauthAuthorizationExpiresIn && $this->oauthAuthorizationExpiresIn < new \DateTime())
-        ) {
-            $this->getRequestToken($parts);
-            $parts['oauth_token'] = $this->token;
+        $newToken = $this->fetchNewToken($parts);
+        if ($newToken) {
+            $parts['oauth_token'] = $newToken;
         }
 
         return $parts;
+    }
+
+    /**
+     * Get new token for Xero API requests
+     *
+     * @param array $parts
+     * @return string|null
+     * @throws ApiException
+     */
+    private function fetchNewToken(array $parts)
+    {
+        $fetchNewToken = false;
+        // We should receive new RequestToken when old access token expires for public apps
+        if ($this->tokenExpireTime && $this->tokenExpireTime < new \DateTime()) {
+            $this->token = '';
+            $this->tokenSecret = '';
+            unset($parts['oauth_token']);
+            $fetchNewToken = true;
+        }
+
+        if (!$this->tokenVerified) {
+            $fetchNewToken = true;
+        }
+
+        if ($this->oauthAuthorizationExpiresIn && $this->oauthAuthorizationExpiresIn < new \DateTime()) {
+            $fetchNewToken = true;
+        }
+
+        if ($fetchNewToken) {
+            return $this->getRequestToken($parts);
+        }
+
+        return null;
     }
 
     /**
@@ -390,6 +438,8 @@ class RequestHandler
         }
 
         if ($mode === static::REQUEST_TOKEN) {
+            $this->tokenVerified = false;
+            $this->tokenExpireTime = '';
             throw new AuthException(AuthException::OAUTH_TOKEN_AUTHORIZATION_EXPECTED, $this->token);
         }
 
@@ -410,13 +460,7 @@ class RequestHandler
     {
         $authToken = $this->getAuthToken();
 
-        $signParameters = $authToken;
-
-        if ($httpMethod === 'GET') {
-            foreach ($parameters as $key => $value) {
-                $signParameters[$key] = $value;
-            }
-        }
+        $signParameters = $this->getSignParameters($httpMethod, $parameters, $authToken);
 
         $fullUrl = sprintf(
             '%s/%s',
@@ -443,5 +487,22 @@ class RequestHandler
             $parameters,
             'json_decode'
         );
+    }
+
+    /**
+     * Generates array of parameters to sign
+     * @param $httpMethod string
+     * @param array $parameters
+     * @param array $authToken
+     */
+    private function getSignParameters($httpMethod, $parameters, $authToken)
+    {
+        $signParameters = $authToken;
+
+        if ($httpMethod === 'GET') {
+            $signParameters = array_merge($signParameters, $parameters);
+        }
+
+        return $signParameters;
     }
 }

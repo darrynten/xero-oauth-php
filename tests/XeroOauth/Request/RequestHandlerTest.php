@@ -223,9 +223,11 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             ),
         ]);
 
+        $parameters = ['key' => 'value'];
+
         $this->assertEquals(
             \GuzzleHttp\json_decode($result),
-            $this->handler->handleRequest($method, $uri, [ ], [ ], 'json_decode')
+            $this->handler->handleRequest($method, $uri, [ ], $parameters, 'json_decode')
         );
     }
 
@@ -254,7 +256,6 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Checks request method of current handler
-     * Checks only case with getting Access Token
      */
     public function testRequest()
     {
@@ -287,7 +288,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
                 200,
                 [ 'ContentType: application/json' ],
                 $expectedResult
-            ),
+            )
         ]);
 
         try {
@@ -314,7 +315,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $result = $this->handler->request(
             'GET',
             self::TEST_URI,
-            []
+            ['key' => 'value']
         );
         $this->assertEquals(\GuzzleHttp\json_decode($expectedResult), $result);
 
@@ -337,6 +338,78 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($now < $authData['oauth_expires_in']);
         $now->modify('10 seconds');
         $this->assertFalse($now < $authData['oauth_expires_in']);
+    }
+
+    /**
+     * Tests request fetches new token
+     */
+    public function testRequestFetchNewToken()
+    {
+        $this->config['token'] = 'FT24XKBIJMGNWRBDCSWXTRHUYS3BZA';
+        $this->config['token_secret'] = 'MX9WR46QZAVCIQGA4EIM1RITMZARMT';
+        $this->config['token_verified'] = true;
+        $this->config['token_expires_in'] = new \DateTime();
+        $this->config['token_expires_in']->modify('-1800 seconds'); // force expire
+        $this->config['verifier'] = '123456';
+
+        $expectedResult = \GuzzleHttp\json_encode([
+            'status' => 'ready',
+        ]);
+
+        $this->handler = new RequestHandler($this->config);
+        $this->setUpMockClient([
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                'oauth_token=NEW4XKBIJMGNWRBDCSWXTRHUYS3BZA&oauth_token_secret=NEWWR46QZAVCIQGA4EIM1RITMZARMT&oauth_callback_confirmed=true'
+            ),
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                'oauth_token=NEW4JH67XGQBDAL8ASZQCMYVQRMEZY&oauth_token_secret=NEW8NZTF1TS6GB73PTBDXPPVISQKRS&oauth_expires_in=1800&xero_org_muid=bCjSHi%24ODqQhFUHw4EYtvm'
+            ),
+            new Response(
+                200,
+                [ 'ContentType: application/json' ],
+                $expectedResult
+            ),
+        ]);
+
+        try {
+            $this->handler->request(
+                'GET',
+                self::TEST_URI,
+                [ ]
+            );
+        } catch (AuthException $e) {
+            if ($e->getCode() !== AuthException::OAUTH_TOKEN_AUTHORIZATION_EXPECTED) {
+                throw new \Exception(sprintf('Received unexpected exception code %s while auth verification', $e->getCode()));
+            }
+        }
+
+        // now we assume that user authorized our token
+        $authData = $this->handler->getAuthData();
+        $this->assertCount(7, $authData);
+        $this->assertEquals('NEW4XKBIJMGNWRBDCSWXTRHUYS3BZA', $authData['oauth_token']);
+        $this->assertEquals('NEWWR46QZAVCIQGA4EIM1RITMZARMT', $authData['oauth_token_secret']);
+        $this->assertEquals('123456', $authData['oauth_verifier']);
+        $this->assertEquals(false, $authData['token_verified']);
+        $this->assertEquals('', $authData['oauth_expires_in']);
+
+        $result = $this->handler->request(
+            'GET',
+            self::TEST_URI,
+            []
+        );
+        $this->assertEquals(\GuzzleHttp\json_decode($expectedResult), $result);
+
+        $authData = $this->handler->getAuthData();
+        $this->assertCount(7, $authData);
+        $this->assertEquals('NEW4JH67XGQBDAL8ASZQCMYVQRMEZY', $authData['oauth_token']);
+        $this->assertEquals('NEW8NZTF1TS6GB73PTBDXPPVISQKRS', $authData['oauth_token_secret']);
+        $this->assertEquals('123456', $authData['oauth_verifier']); // in real app it will not be empty
+        $this->assertEquals(true, $authData['token_verified']);
+        $this->assertInstanceOf(\DateTime::class, $authData['oauth_expires_in']);
     }
 
     /**
@@ -475,6 +548,99 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf(\DateTime::class, $authData['oauth_authorization_expires_in']);
 
         $this->assertEquals(\GuzzleHttp\json_decode($expectedResult2), $result2);
+    }
+
+    /**
+     * Tests if contstructor works correctly
+     */
+    public function testConstructor()
+    {
+        $reflection = new ReflectionClass($this->handler);
+        $reflectedProp = $reflection->getProperty('tokenVerified');
+        $reflectedProp->setAccessible(true);
+        $this->assertEquals(null, $reflectedProp->getValue($this->handler));
+
+        $this->config['token_verified'] = true;
+        $this->handler = new RequestHandler($this->config);
+
+        $reflection = new ReflectionClass($this->handler);
+        $reflectedProp = $reflection->getProperty('tokenVerified');
+        $reflectedProp->setAccessible(true);
+        $this->assertEquals(true, $reflectedProp->getValue($this->handler));
+    }
+
+    /**
+     * Tests if function to receive parameters for signing is returnig expected results
+     */
+    public function testSignParameters()
+    {
+        $reflection = new ReflectionClass($this->handler);
+        $method = $reflection->getMethod('getSignParameters');
+        $method->setAccessible(true);
+
+        $authToken = [
+            'oauth_consumer_key' => 'key',
+            'oauth_signature_method' => 'HMAC-SHA1'
+        ];
+        $parameters = [
+            'key' => 'value',
+            'key2' => 'value2'
+        ];
+
+        $result = $method->invokeArgs($this->handler, [
+            'GET', $parameters, $authToken
+        ]);
+
+        $this->assertCount(4, $result);
+        $this->assertEquals('key', $result['oauth_consumer_key']);
+        $this->assertEquals('HMAC-SHA1', $result['oauth_signature_method']);
+        $this->assertEquals('value', $result['key']);
+        $this->assertEquals('value2', $result['key2']);
+
+        $result = $method->invokeArgs($this->handler, [
+            'POST', [], $authToken
+        ]);
+        $this->assertCount(2, $result);
+        $this->assertEquals('key', $result['oauth_consumer_key']);
+        $this->assertEquals('HMAC-SHA1', $result['oauth_signature_method']);
+    }
+
+    /**
+     * Tests if function to receive form request options works as expected
+     */
+    public function testRequestOptions()
+    {
+        $reflection = new ReflectionClass($this->handler);
+        $method = $reflection->getMethod('getRequestOptions');
+        $method->setAccessible(true);
+
+        $options = ['some-query-option' => true];
+
+        $parameters = [
+            'key' => 'value',
+            'key2' => 'value2'
+        ];
+
+        $result = $method->invokeArgs($this->handler, [
+            'GET', $parameters, $options
+        ]);
+
+        $this->assertCount(2, $result);
+        $this->assertEquals(true, $result['some-query-option']);
+        $this->assertCount(2, $result['query']);
+        $this->assertEquals('value', $result['query']['key']);
+        $this->assertEquals('value2', $result['query']['key2']);
+
+        $result = $method->invokeArgs($this->handler, [
+            'POST', $parameters, $options
+        ]);
+
+        $this->assertCount(2, $result);
+        $this->assertEquals(true, $result['some-query-option']);
+        $this->assertInstanceOf(\StdClass::class, $result['json']);
+        $this->assertCount(2, get_object_vars($result['json']));
+        $this->assertEquals('value', $result['json']->key);
+        $this->assertEquals('value2', $result['json']->key2);
     }
 
     /**
