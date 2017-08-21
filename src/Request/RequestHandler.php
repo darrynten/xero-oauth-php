@@ -228,17 +228,7 @@ class RequestHandler
             throw new ApiException('405 Bad HTTP Verb', 405);
         }
 
-        if (!empty($parameters)) {
-            if ($method === 'GET') {
-                // Send as get params
-                foreach ($parameters as $key => $value) {
-                    $options['query'][$key] = $value;
-                }
-            } elseif ($method === 'POST' || $method === 'PUT' || $method === 'DELETE') {
-                // Otherwise send JSON in the body
-                $options['json'] = (object)$parameters;
-            }
-        }
+        $options = $this->getRequestOptions($method, $parameters, $options);
 
         // Let's go
         try {
@@ -252,6 +242,29 @@ class RequestHandler
         $result = $contentMethod ? $contentMethod($contents) : $contents;
 
         return $result;
+    }
+
+    /**
+     * Forms request options
+     * @param string $method
+     * @param array $parameters
+     * @param array $options
+     */
+    private function getRequestOptions($method, $parameters, $options)
+    {
+        if (!empty($parameters)) {
+            if ($method === 'GET') {
+                // Send as get params
+                foreach ($parameters as $key => $value) {
+                    $options['query'][$key] = $value;
+                }
+            } elseif ($method === 'POST' || $method === 'PUT' || $method === 'DELETE') {
+                // Otherwise send JSON in the body
+                $options['json'] = (object)$parameters;
+            }
+        }
+
+        return $options;
     }
 
     /**

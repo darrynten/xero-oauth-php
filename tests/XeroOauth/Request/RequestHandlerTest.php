@@ -606,6 +606,44 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Tests if function to receive form request options works as expected
+     */
+    public function testRequestOptions()
+    {
+        $reflection = new ReflectionClass($this->handler);
+        $method = $reflection->getMethod('getRequestOptions');
+        $method->setAccessible(true);
+
+        $options = ['some-query-option' => true];
+
+        $parameters = [
+            'key' => 'value',
+            'key2' => 'value2'
+        ];
+
+        $result = $method->invokeArgs($this->handler, [
+            'GET', $parameters, $options
+        ]);
+
+        $this->assertCount(2, $result);
+        $this->assertEquals(true, $result['some-query-option']);
+        $this->assertCount(2, $result['query']);
+        $this->assertEquals('value', $result['query']['key']);
+        $this->assertEquals('value2', $result['query']['key2']);
+
+        $result = $method->invokeArgs($this->handler, [
+            'POST', $parameters, $options
+        ]);
+
+        $this->assertCount(2, $result);
+        $this->assertEquals(true, $result['some-query-option']);
+        $this->assertInstanceOf(\StdClass::class, $result['json']);
+        $this->assertCount(2, get_object_vars($result['json']));
+        $this->assertEquals('value', $result['json']->key);
+        $this->assertEquals('value2', $result['json']->key2);
+    }
+
+    /**
      * Provides data for testing
      *
      * @return array
