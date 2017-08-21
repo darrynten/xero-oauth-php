@@ -551,6 +551,25 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Tests if contstructor works correctly
+     */
+    public function testConstructor()
+    {
+        $reflection = new ReflectionClass($this->handler);
+        $reflectedProp = $reflection->getProperty('tokenVerified');
+        $reflectedProp->setAccessible(true);
+        $this->assertEquals(null, $reflectedProp->getValue($this->handler));
+
+        $this->config['token_verified'] = true;
+        $this->handler = new RequestHandler($this->config);
+
+        $reflection = new ReflectionClass($this->handler);
+        $reflectedProp = $reflection->getProperty('tokenVerified');
+        $reflectedProp->setAccessible(true);
+        $this->assertEquals(true, $reflectedProp->getValue($this->handler));
+    }
+
+    /**
      * Provides data for testing
      *
      * @return array

@@ -124,6 +124,13 @@ class RequestHandler
     private $tokenVerifier;
 
     /**
+     * Indicates if token was verified
+     *
+     * @var bool|null $tokenVerified
+     */
+    private $tokenVerified;
+
+    /**
      * The callback for an Authorization process
      *
      * @var string $callbackUrl
