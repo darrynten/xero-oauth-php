@@ -447,13 +447,7 @@ class RequestHandler
     {
         $authToken = $this->getAuthToken();
 
-        $signParameters = $authToken;
-
-        if ($httpMethod === 'GET') {
-            foreach ($parameters as $key => $value) {
-                $signParameters[$key] = $value;
-            }
-        }
+        $signParameters = $this->getSignParameters($httpMethod, $parameters, $authToken);
 
         $fullUrl = sprintf(
             '%s/%s',
@@ -480,5 +474,22 @@ class RequestHandler
             $parameters,
             'json_decode'
         );
+    }
+
+    /**
+     * Generates array of parameters to sign
+     * @param $httpMethod string
+     * @param array $parameters
+     * @param array $authToken
+     */
+    private function getSignParameters($httpMethod, $parameters, $authToken)
+    {
+        $signParameters = $authToken;
+
+        if ($httpMethod === 'GET') {
+            $signParameters = array_merge($signParameters, $parameters);
+        }
+
+        return $signParameters;
     }
 }

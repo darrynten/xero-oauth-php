@@ -570,6 +570,42 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Tests if function to receive parameters for signing is returnig expected results
+     */
+    public function testSignParameters()
+    {
+        $reflection = new ReflectionClass($this->handler);
+        $method = $reflection->getMethod('getSignParameters');
+        $method->setAccessible(true);
+
+        $authToken = [
+            'oauth_consumer_key' => 'key',
+            'oauth_signature_method' => 'HMAC-SHA1'
+        ];
+        $parameters = [
+            'key' => 'value',
+            'key2' => 'value2'
+        ];
+
+        $result = $method->invokeArgs($this->handler, [
+            'GET', $parameters, $authToken
+        ]);
+
+        $this->assertCount(4, $result);
+        $this->assertEquals('key', $result['oauth_consumer_key']);
+        $this->assertEquals('HMAC-SHA1', $result['oauth_signature_method']);
+        $this->assertEquals('value', $result['key']);
+        $this->assertEquals('value2', $result['key2']);
+
+        $result = $method->invokeArgs($this->handler, [
+            'POST', [], $authToken
+        ]);
+        $this->assertCount(2, $result);
+        $this->assertEquals('key', $result['oauth_consumer_key']);
+        $this->assertEquals('HMAC-SHA1', $result['oauth_signature_method']);
+    }
+
+    /**
      * Provides data for testing
      *
      * @return array
