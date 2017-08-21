@@ -267,11 +267,6 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $expectedResult = \GuzzleHttp\json_encode([
             'status' => 'ready',
         ]);
-        $expectedResult2 = \GuzzleHttp\json_encode([
-            'status' => 'ready2',
-        ]);
-
-        $this->config['verifier'] = '123456';
 
         $this->setUpMockClient([
             new Response(
@@ -343,12 +338,23 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($now < $authData['oauth_expires_in']);
         $now->modify('10 seconds');
         $this->assertFalse($now < $authData['oauth_expires_in']);
+    }
 
-        $this->config['token'] = $authData['oauth_token'];
-        $this->config['token_secret'] = $authData['oauth_token_secret'];
-        $this->config['token_verified'] = $authData['token_verified'];
-        $this->config['token_expires_in'] = $authData['oauth_expires_in'];
+    /**
+     * Tests request fetches new token
+     */
+    public function testRequestFetchNewToken()
+    {
+        $this->config['token'] = 'FT24XKBIJMGNWRBDCSWXTRHUYS3BZA';
+        $this->config['token_secret'] = 'MX9WR46QZAVCIQGA4EIM1RITMZARMT';
+        $this->config['token_verified'] = true;
+        $this->config['token_expires_in'] = new \DateTime();
         $this->config['token_expires_in']->modify('-1800 seconds'); // force expire
+        $this->config['verifier'] = '123456';
+
+        $expectedResult = \GuzzleHttp\json_encode([
+            'status' => 'ready',
+        ]);
 
         $this->handler = new RequestHandler($this->config);
         $this->setUpMockClient([
@@ -365,7 +371,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             new Response(
                 200,
                 [ 'ContentType: application/json' ],
-                $expectedResult2
+                $expectedResult
             ),
         ]);
 
@@ -395,7 +401,7 @@ class RequestHandlerTest extends \PHPUnit_Framework_TestCase
             self::TEST_URI,
             []
         );
-        $this->assertEquals(\GuzzleHttp\json_decode($expectedResult2), $result);
+        $this->assertEquals(\GuzzleHttp\json_decode($expectedResult), $result);
 
         $authData = $this->handler->getAuthData();
         $this->assertCount(7, $authData);
