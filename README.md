@@ -147,6 +147,8 @@ https://developer.xero.com/documentation/auth-and-limits/public-applications
 ### Partner Application
 https://developer.xero.com/documentation/auth-and-limits/partner-applications
 
+**Please note that refreshing token in partner application is not tested so when access token expires things can go strange.**
+
 # Notes
 
 ### Request Limits
