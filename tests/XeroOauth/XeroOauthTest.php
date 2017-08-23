@@ -38,10 +38,17 @@ class XeroOauthTest extends \PHPUnit_Framework_TestCase
         $this->client = new XeroOauth([
             'applicationType' => $applicationType,
             'key' => self::TEST_KEY,
+            'callback_url' => 'http://example.com'
         ]);
 
         $this->assertInstanceOf(XeroOauth::class, $this->client);
         $this->assertInstanceOf($expected, $this->client->config);
+
+        $reflection = new ReflectionClass($this->client->config);
+        $reflectedCallbackUrl = $reflection->getProperty('callbackUrl');
+        $reflectedCallbackUrl->setAccessible(true);
+        $value = $reflectedCallbackUrl->getValue($this->client->config);
+        $this->assertEquals('http://example.com', $value);
     }
 
     /**
