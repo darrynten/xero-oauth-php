@@ -48,5 +48,23 @@ class XeroOauth
         $this->request = new RequestHandler($this->config->getRequestHandlerConfig());
     }
 
-    // etc
+    /**
+     * Sends actual request to xero api
+     * @param string $method
+     * @param string $uri
+     * @param array $parameters
+     */
+    public function request($method, $uri, $parameters = [ ])
+    {
+        return $this->request->request($method, $uri, $parameters);
+    }
+
+    /**
+     * Returns authentication data
+     * @return array
+     */
+    public function getAuthData()
+    {
+        return $this->request->getAuthData();
+    }
 }

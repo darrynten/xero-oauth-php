@@ -193,12 +193,32 @@ abstract class BaseConfig
     public $signWith;
 
     /**
+     * Any additional options required for RequestHandler
+     *
+     * @var array $options
+     */
+    public $options;
+
+    /**
+     * Valid options keys
+     *
+     * @var array $optionsKeys
+     */
+    public $optionsKeys;
+
+    /**
      * Construct the config object
      *
      * @param array $config An array of configuration options
      */
     public function __construct($config)
     {
+        $this->optionsKeys = [
+            'token', 'token_secret',
+            'token_expires_in', 'verifier',
+            'private_key', 'oauth_endpoint'
+        ];
+
         // Throw exceptions on essentials
         $this->checkAndSetEssentials($config);
 
@@ -247,6 +267,19 @@ abstract class BaseConfig
             $this->endpoint = (string)$config['endpoint'];
         }
 
+        $this->callbackUrl = '';
+
+        if (isset($config['callback_url']) && !empty($config['callback_url'])) {
+            $this->callbackUrl = (string)$config['callback_url'];
+        }
+
+        $this->options = [];
+        foreach ($this->optionsKeys as $key) {
+            if (isset($config[$key])) {
+                $this->options[$key] = $config[$key];
+            }
+        }
+
         // etc etc
     }
 
@@ -261,13 +294,19 @@ abstract class BaseConfig
             'key' => $this->key,
             'endpoint' => $this->endpoint,
             'secret' => $this->secret, // we need it to sign requests
-            'token' => '', // todo: we need it
-            'token_secret' => '', // todo: we need it to sign requests
-            'token_expires_in' => '', // todo: we need it
-            'verifier' => '', // todo: need it to getAccessToken
             'callback_url' => $this->callbackUrl,
             'sign_with' => $this->signWith,
         ];
+
+        foreach ($this->optionsKeys as $key) {
+            $config[$key] = isset($this->options[$key]) ? $this->options[$key] : '';
+        }
+
+        if ($this->applicationType === ConfigFactory::APPLICATION_TYPE_PRIVATE) {
+            $config['token'] = $this->key;
+            $config['token_secret'] = $this->secret;
+            $config['token_verified'] = true;
+        }
 
         return $config;
     }
