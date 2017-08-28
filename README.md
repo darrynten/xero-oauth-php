@@ -21,40 +21,72 @@ that follows Xeros rules and conventions.
 
 PHP 7.0+
 
-## Basic use
+## Desired Use
+
+The desired use is for a host application to be able to do something like:
 
 ```php
+// Host application is darrynten/xero-accounting-php
+
 $config = [
-    'key' => CONSUMER_KEY, 
+    'key' => CONSUMER_KEY,
     'secret' => CONSUMER_SECRET,
-    'applicationType' => APPLICATION_TYPE
+    'applicationType' => APPLICATION_TYPE,
 ];
 
 $xeroClient = new XeroOauth($config);
 $result = $xeroClient->request('GET', 'TaxRates');
 ```
 
-### Definitions
+This will require the package to be able to track state, tokens etc
 
-# TODO
+## Current Use
 
-## Features
+This is the current basic usage of this package.
 
-This is the basic outline of the project and is a work in progress.
-
-## Usage Examples
+TODOs have been placed where work is required.
 
 # Public auth example for RequestHandler
+
 ```php
+/**
+ *
+ * TODO this package should figure this all out based on
+ * information passed into XeroOauth - use the config
+ * factory to do this.
+ *
+ * This is currently forcing the host application to keep track
+ * of all this information.
+ *
+ * We can use darrynten/any-cache to store tokens
+ */
+
 $config [
     'key' => CONSUMER_KEY,
     'secret' => CONSUMER_SECRET,
+    /**
+     * TODO
+     *
+     * The host application should only have to pass in the app
+     * type and the factory should be used to get the appropriate
+     * signing mechanisms etc
+     *
+     * This applies to as much config as possible
+     */
     'sign_with' => 'HMAC-SHA1',
     // other options
 ]
 
 // Get Request Token
 $handler = new RequestHandler($config);
+
+/**
+ * TODO
+ *
+ * The host application should not concern itself with this, it should
+ * only have to `$xeroClient->request('GET', 'Currencies')`
+ *
+ */
 try {
     $handler->request('GET', 'Currencies');
 } catch (AuthException $e) {
@@ -62,6 +94,19 @@ try {
     // we store oauth_token from $authData and direct user to
     // https://api.xero.com/oauth/Authorize?oauth_token=REQUEST_TOKEN_HERE
 }
+
+/**
+ * TODO
+ *
+ * All of the below should be kept and tracked using this package.
+ *
+ * Host applications that would need redirect urls etc would need
+ * to provide this in the config.
+ *
+ * There is configuration factory functionality in place for the
+ * three types of applications (public, partner, private)
+ *
+ */
 
 // Get Access Token
 // We assume that user granted access by visiting this url
@@ -88,6 +133,16 @@ Array
     [oauth_verifier] => 563499
     [token_verified] => true
 )
+
+/**
+ * TODO
+ *
+ * Tokens that come back like this should be tracked internally
+ * using the darrynten/any-cache package
+ *
+ * Expires etc can all be tracked in a cache with that package.
+ *
+ */
 // 'token_verified' is true so we can use ACCESS_TOKEN_HERE to make requests
 */
 
@@ -96,36 +151,52 @@ $config['token'] = ACCESS_TOKEN_HERE;
 $config['token_secret'] = TOKEN_SECRET_HERE;
 $config['token_expires_in'] = $datetimeObject; // see above
 $config['token_verified'] = true;
+
+/**
+ * TODO
+ *
+ * This should be the only thing the host has to worry about
+ */
 $handler = new RequestHandler($config);
 $response = $handler->request('GET', 'Currencies');
 
 /*
 {
-  "Id": "4f2d7d6a-6531-4674-87a4-06630ff7eac6",
+  "Id": "3f0d9d3a-6540-4668-87a4-06621ff7eac10",
   "Status": "OK",
-  "ProviderName": "Testing public app",
-  "DateTimeUTC": "\/Date(1502804191938)\/",
+  "ProviderName": "Public app",
+  "DateTimeUTC": "\/Date(1502804191899)\/",
   "Currencies": [
     {
-      "Code": "RUB",
-      "Description": "Russian Ruble"
+      "Code": "ZAR",
+      "Description": "South African Rand"
     }
   ]
 }
 */
 ```
 
+## Delivery
+
+- [x] Public Application Requests
+- [x] Private Application Requests
+- [x] Partner Application Requests
+- [x] Signing
+- [ ] Token Tracking
+
+The deliverable is close :)
+
 ### Application base
 
-* Guzzle is used for the communications (I think we should replace?)
-* The library has 100% test coverage
-* etc etc
+* Guzzle is used for the communications
+* You can use darrynten/any-cache to track tokens
+* The library will have 100% test coverage
 
 The client is not 100% complete and is a work in progress, details below.
 
 ## Documentation
 
-This will eventually fully mimic the documentation available on the site.
+This should eventually fully mimic the documentation available on the site.
 https://developer.xero.com/documentation
 
 Each section must have a short explaination and some example code like on
@@ -139,12 +210,15 @@ Xero has 3 different types of applications whose auth is handled
 differently between them.
 
 ### Private Application
+
 https://developer.xero.com/documentation/auth-and-limits/private-applications
 
 ### Public Application
+
 https://developer.xero.com/documentation/auth-and-limits/public-applications
 
 ### Partner Application
+
 https://developer.xero.com/documentation/auth-and-limits/partner-applications
 
 **Please note that refreshing token in partner application is not tested so when access token expires things can go strange.**
@@ -155,7 +229,63 @@ https://developer.xero.com/documentation/auth-and-limits/partner-applications
 
 All Xero companies have a request limit of 5000 API requests per day. A maximum of 100 results will be returned for list methods, regardless of the parameter sent through.
 
-Rate limiting must be solved in this oauth client
+Rate limiting should be solved in this oauth client, but is outside of
+the initial delivery scope.
+
+## Additional Refactoring Idea
+
+# Please discuss! This is _not_ part of deliverable.
+
+Currently XeroOauth creates a Config object and RequestHandler. So all the work with Tokens and Signing is area of responsibility of the RequestHandler, but this class should only do one thing - be responsible for the request handling.
+
+ApplicationConfig objects are just the source of config parameters.
+
+It might be better to use Applications instead of ApplicationConfigs - example:
+
+* XeroOauth creates Application object
+* Application object uses RequestHandler to send requests
+* Application object uses SignFactory (new object) to sign requests
+* Application object is responsible for Authorization process for it's type
+
+Pseudo code example
+
+```
+class BaseApplication
+{
+    ...
+    public function __construct($config = [], RequestHandler $requestHandler, SignFactory $signFactory)
+    {
+        $this->setEssentials($config);
+        $this->setOverrides($config);
+
+        $this->requestHandler = $requestHandler;
+        $this->requestHandler->init($this->getHandlerOptions);
+
+        $this->signFactory = $signFactory;
+    }
+
+    public function request($method, $service, $parameters)
+    {
+        if(!$this->token || $this->isTokenExpired()) {
+            // request a token and provide upper level with all the data it will need
+            // like link to authorisation and current token data
+        }
+
+        $requestData = $this->combineRequest($service, $parameters);
+        $signedRequest = $this->sign($requestData);
+
+        $this->requestHandler->request($method, $service, $signedRequest);
+    }
+
+    private function sign($requestData)
+    {
+        return $this->signFactory->sign(
+            $requestData, $this->getSignOptions()
+        );
+    }
+}
+```
+
 
 ## Contributing and Testing
 
@@ -171,5 +301,6 @@ https://developer.xero.com/documentation
 
 ## Acknowledgements
 
+* [Fergus Strangways-Dixon](https://github.com/fergusdixon)
 * [Mikhail Levanov](https://github.com/leor)
 * [Vitaliy Likhachev](https://github.com/make-it-git)
